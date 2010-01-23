@@ -1,0 +1,53 @@
+INSTALLATION:
+
+Thank you for trying gistore.  To install, run:
+
+	python setup.py install
+
+The build process can be also be run separately:
+
+	python setup.py build
+
+The default prefix is generally /usr, so files would be put in /usr/bin,
+/usr/share/man/, etc.  An alternate prefix can be specified using the
+--prefix=<prefix> option.  For example:
+
+	python setup.py install --prefix=/usr/local
+
+The default prefix depends on how you (or your distribution) installed and
+configured Python. Suggested reading is "How installation works" from the
+Python docs, which includes commands to determine your default prefix:
+http://docs.python.org/install/index.html#how-installation-works
+
+	python setup.py install --help
+
+More information about using setup.py and how gistore is installed
+is available from the Python guide, Installing Python Modules for System
+Administrators, located at http://docs.python.org/install/index.html
+
+REQUIREMENTS:
+
+*nix is support, but Windows not.
+
+You need Python, 2.5 or later is recommended. Previous versions of 
+Python have not been tested. For Python, see http://www.python.org.
+
+Gistore is a backup system with a DVCS as backend, and git is highly
+recommended. Orignally or currently only git is supportted. So, you
+must have git installed. For git installation, see http://git-scm.com/.
+
+Gistore can *store* files and directories from any place, without copying
+or sync files to the gistore DVCS working tree. All the backup files
+and directories are mounted to the gistore DVCS working tree on the fly.
+Currently mount only works on *nix, so Windows is not supported.
+
+Some operations may need root privilege, such as mount, or backup system
+files in /etc. If you not backup system files but only your personal data
+run as a normal user maybe ok, with the help of bindfs or sudo. If the 
+system has installed bindfs and fuse-utils, mount may success without root
+permission. If not, sudo is used.
+
+TROUBLESHOOTING:
+
+If you have everything installed properly, and it still doesn't work,
+see the enclosed FAQ.html, the web page at http://open.ossxp.com.
