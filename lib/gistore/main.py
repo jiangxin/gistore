@@ -15,6 +15,13 @@
 #
 
 '''PROGRAM INTRODUCTION
+Gistore is a backup system with a DVCS as backend, and git is highly
+recommended. Orignally or currently only git is supportted. So, you
+must have git installed. For git installation, see http://git-scm.com/.
+
+Gistore can *store* files and directories from any place, without copying
+or sync files to the gistore DVCS working tree. All the backup files
+and directories are mounted to the gistore DVCS working tree on the fly.
 
 Usage: %(PROGRAM)s [options]
 
@@ -31,9 +38,26 @@ Options:
 
 Available command:
     list
-    status
-    init
-    commit
+        List tasks linked to /etc/gistore/tasks/
+
+    status [task or direcotry]
+        Show backup repository's backup list and other status
+
+    init   [task or directory]
+        Initial gistore backup repository
+
+    commit [task or direcotry]
+        Commit changes in backup repository. The following command run 
+        in order:
+          * mount
+          * commit
+          * umount
+
+    mount  [task or direcotry]
+        Mount 
+
+    umount [task or direcotry]
+        Umount
 '''
 
 from subprocess import Popen, PIPE, STDOUT
