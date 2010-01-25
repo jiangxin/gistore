@@ -132,7 +132,7 @@ class Gistore(object):
 
         if os.getuid() != 0:
             if repo_cfg["root_only"]:
-                raise PemissionDeniedError("Only root user allowed for task: %s" % self.taskname or self.root)
+                raise PemissionDeniedError("Only root user allowed for task: %s" % (self.taskname or self.root))
             else:
                 verbose("You are NOT root user, some backups may lost !", LOG_WARNING)
 
