@@ -2,7 +2,7 @@
 
 from distutils.core import setup
 
-version_string = "0.1"
+version_string = "0.1.1"
 
 setup(name='gistore',
     version=version_string,
@@ -13,11 +13,7 @@ setup(name='gistore',
     package_dir = {'': 'lib'},
     packages=['gistore','gistore.scm'],
     scripts = ['gistore'],
-    data_files = [('share/doc/gistore-%s' % (version_string,),
-                   ['CHANGELOG', 'COPYING', 'README']),
-                  ('/etc/gistore', ['cfg/local_config.py.in']),
-                  ('/etc/gistore/tasks', ['cfg/tasks/.keep-empty']),
-                 ]
+    data_files = [('share/doc/gistore', ['CHANGELOG', 'COPYING', 'README']), ]
     )
 
 # vim: et sw=4 ts=4
