@@ -176,8 +176,7 @@ class Gistore(object):
                     elif os.path.exists(os.path.join(p, '.git')):
                         if not os.access(os.path.join(p, '.git'), os.R_OK) or \
                            os.path.exists(os.path.join(p, '.git', 'objects')):
-                            verbose("%s looks like a repository, not store!!!" % p, LOG_ERR)
-                            continue
+                            verbose("%s looks like a repository, and will add as submodule" % p, LOG_WARNING)
 
                     # check if p is parent of self.root
                     elif self.root.startswith(os.path.join(p,"")) or self.root == p:
