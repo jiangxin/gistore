@@ -513,7 +513,13 @@ class GistoreCmd(object):
 
         try:
             # Override SIGINT handler, do umount and other cleanups...
-            signal.signal(signal.SIGINT, GistoreCmd.sigint_handler)
+            signal.signal(signal.SIGINT,  GistoreCmd.sigint_handler)
+            signal.signal(signal.SIGHUP,  GistoreCmd.sigint_handler)
+            signal.signal(signal.SIGQUIT, GistoreCmd.sigint_handler)
+            signal.signal(signal.SIGABRT, GistoreCmd.sigint_handler)
+            signal.signal(signal.SIGSEGV, GistoreCmd.sigint_handler)
+            signal.signal(signal.SIGPIPE, GistoreCmd.sigint_handler)
+            signal.signal(signal.SIGTERM, GistoreCmd.sigint_handler)
 
             if 'do_'+command in filter(lambda n: n.startswith('do_'), dir(GistoreCmd)):
                 getattr(GistoreCmd, 'do_' + command)(args)
