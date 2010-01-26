@@ -99,7 +99,7 @@ class SCM(AbstractSCM):
                 submodules.append(m.group(1))
         if submodules:
             verbose("Not backup submodules:"+"\n    "+" ".join(submodules), LOG_ERR, False)
-            verbose("    " + "* Remove submodules using command: git rm --cached sub/module", LOG_NOTICE, False)
+            verbose("    " + "* Remove submodules using command: git rm --cached sub/module", LOG_ERR, False)
         proc.wait()
 
 
