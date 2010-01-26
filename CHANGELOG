@@ -1,3 +1,10 @@
+New in v0.1.x (2010/01/23)
+------------------------
+
+ -  Fixed: create /etc/gistore on the fly, and fixed setuptools in-compatible
+    install. (0.1.1)
+ -  Fixed: force umount failed. (0.1.2)
+
 New in v0.1 (2010/01/23)
 ------------------------
 
