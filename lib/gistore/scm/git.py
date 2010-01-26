@@ -16,6 +16,7 @@
 
 from subprocess import Popen, PIPE, STDOUT
 import os
+import re
 
 from gistore.scm.abstract import AbstractSCM
 from gistore.utils import *
@@ -82,8 +83,24 @@ class SCM(AbstractSCM):
         exception_if_error2(proc_ci, args, test=lambda n: n.startswith("nothing to commit"))
 
     def post_check(self):
+        submodules = []
         args = ["git", "submodule", "status", self.root]
         proc = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
-        #exception_if_error(proc, " ".join(args))
+        #Read stdout buffer before wait(), because if buffer overflow, process will hang!
+        pat1 = re.compile(r".\w{40} (\w*) \(.*\)?")
+        pat2 = re.compile(r"No submodule mapping found in .gitmodules for path '(.*)'")
+        for line in proc.stdout.readlines():
+            line = line.strip()
+            m = pat1.match(line)
+            if m:
+                submodules.append(m.group(1))
+            m = pat2.match(line)
+            if m:
+                submodules.append(m.group(1))
+        if submodules:
+            verbose("Not backup submodules:"+"\n    "+" ".join(submodules), LOG_ERR, False)
+            verbose("    " + "* Remove submodules using command: git rm --cached sub/module", LOG_NOTICE, False)
+        proc.wait()
 
 
+# vim: et ts=4 sw=4

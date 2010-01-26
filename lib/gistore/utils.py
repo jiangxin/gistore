@@ -66,7 +66,7 @@ def show_exception(e):
     print >> sys.stderr, ("Exception caught abort: %s" %
                           exception_to_unicode(e, traceback=traceback))
 
-def verbose(args, level=LOG_INFO):
+def verbose(args, level=LOG_INFO, show_prompt=True):
     if level <= cfg.log_level and args:
         firstline = True
         for line in args.splitlines():
@@ -81,11 +81,12 @@ def verbose(args, level=LOG_INFO):
                     prompt = "info>"
                 elif level == LOG_DEBUG:
                     prompt = "debug>"
-                if firstline:
-                    firstline = False
-                    print >> sys.stderr, prompt,
-                else:
-                    print >> sys.stderr, " " * len(prompt),
+                if show_prompt:
+                    if firstline:
+                        firstline = False
+                        print >> sys.stderr, prompt,
+                    else:
+                        print >> sys.stderr, " " * len(prompt),
                 print >> sys.stderr, line
             else:
                 print >> sys.stderr, ""
