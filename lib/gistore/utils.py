@@ -20,6 +20,8 @@ from gistore.config import *
 from gistore.errors import *
 
 def warn_if_error(proc, cmdline="", stdout=None):
+    if isinstance(cmdline, (list,tuple)):
+        cmdline = " ".join(cmdline)
     if stdout is None:
         stdout = proc.stdout
     #Read stdout buffer before wait(), because if buffer overflow, process will hang!
@@ -29,6 +31,8 @@ def warn_if_error(proc, cmdline="", stdout=None):
         verbose("Last command: %s\n\tgenerate warnings with returncode %d." % (cmdline, proc.returncode), LOG_WARNING)
 
 def exception_if_error(proc, cmdline="", stdout=None):
+    if isinstance(cmdline, (list,tuple)):
+        cmdline = " ".join(cmdline)
     if stdout is None:
         stdout = proc.stdout
     #Read stdout buffer before wait(), because if buffer overflow, process will hang!
@@ -38,6 +42,8 @@ def exception_if_error(proc, cmdline="", stdout=None):
         raise CommandError("Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode))
 
 def exception_if_error2(proc, cmdline="", stdout=None, test=None):
+    if isinstance(cmdline, (list,tuple)):
+        cmdline = " ".join(cmdline)
     if stdout is None:
         stdout = proc.stdout
     #Read stdout buffer before wait(), because if buffer overflow, process will hang!
@@ -89,8 +95,11 @@ def verbose(args, level=LOG_INFO):
 def exception_to_unicode(e, traceback=""):
     message = '%s: %s' % (e.__class__.__name__, to_unicode(e))
     if traceback:
-        from trac.util import get_last_traceback
-        traceback_only = get_last_traceback().split('\n')[:-2]
+        import traceback
+        from StringIO import StringIO
+        tb = StringIO()
+        traceback.print_exc(file=tb)
+        traceback_only = tb.getvalue().split('\n')[:-2]
         message = '\n%s\n%s' % (to_unicode('\n'.join(traceback_only)), message)
     return message
 

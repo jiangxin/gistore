@@ -30,10 +30,11 @@ class SCM(AbstractSCM):
         if self.is_repos():
             verbose("Repos %s already exists." % self.root, LOG_WARNING)
             return False
-        cmdline = "git init"
         args = ["git", "init", self.root]
+        verbose(" ".join(args), LOG_DEBUG)
         proc = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
-        exception_if_error(proc, cmdline)
+        exception_if_error(proc, args)
+        verbose("create .gitignore", LOG_DEBUG)
         fp = open(os.path.join(self.root, ".gitignore"), "w")
         fp.write(GISTORE_CONFIG_DIR)
         fp.write("\n")
@@ -43,13 +44,12 @@ class SCM(AbstractSCM):
         self._abort_if_not_repos()
         os.chdir(self.root)
         args = ["git", "add", "."]
-        cmdline = "git add ."
-        verbose(cmdline, LOG_DEBUG)
+        verbose(" ".join(args), LOG_DEBUG)
         proc_add = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
-        exception_if_error(proc_add, cmdline)
+        exception_if_error(proc_add, args)
 
         args = ["git", "ls-files", "--deleted"]
-        verbose("git ls-files --deleted.", LOG_DEBUG)
+        verbose(" ".join(args), LOG_DEBUG)
         proc_ls = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
         for file in proc_ls.stdout.readlines():
             # strip last CRLF
@@ -63,10 +63,9 @@ class SCM(AbstractSCM):
                 if os.path.exists(os.path.dirname(file)) and not os.listdir(os.path.dirname(file)):
                     flagfile=os.path.join(os.path.dirname(file), ".gistore-keep-empty")
                     os.mknod(flagfile, 0644)
-                cmdline = "git rm --quiet %s" % file
                 args = ["git", "rm", "--quiet", file]
                 proc_rm = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
-                warn_if_error(proc_rm, cmdline)
+                warn_if_error(proc_rm, args)
                 if flagfile:
                     os.unlink(flagfile)
 
@@ -76,10 +75,15 @@ class SCM(AbstractSCM):
             os.putenv("GIT_COMMITTER_NAME", username)
             os.putenv("GIT_COMMITTER_EMAIL", username+"@"+socket.gethostname())
 
-        cmdline = "git commit -m %s" % message
-        verbose(cmdline, LOG_DEBUG)
         args = ["git", "commit", "--quiet", "-m", message]
+        verbose(" ".join(args), LOG_DEBUG)
         proc_ci = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
         # If nothing to commit, git commit return 1.
-        exception_if_error2(proc_ci, cmdline, test=lambda n: n.startswith("nothing to commit"))
+        exception_if_error2(proc_ci, args, test=lambda n: n.startswith("nothing to commit"))
+
+    def post_check(self):
+        args = ["git", "submodule", "status", self.root]
+        proc = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
+        #exception_if_error(proc, " ".join(args))
+
 

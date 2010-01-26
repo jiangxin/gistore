@@ -291,10 +291,10 @@ class Gistore(object):
             if self.is_mount(p, target):
                 verbose("%s is already mounted." % target, LOG_WARNING)
             else:
-                cmdline = "%s %s %s" % (" ".join(self.cmd_mount), p, target)
-                verbose (cmdline, LOG_DEBUG)
+                args = self.cmd_mount + [p, target]
+                verbose (" ".join(args), LOG_DEBUG)
                 proc_mnt = Popen( self.cmd_mount + [p, target], stdout=PIPE, stderr=STDOUT, close_fds=True )
-                exception_if_error(proc_mnt, cmdline)
+                exception_if_error(proc_mnt, args)
 
     def removedirs(self, target):
         target = os.path.realpath(target)
@@ -311,15 +311,15 @@ class Gistore(object):
         for p in self.store_list.keys():
             target = self.__mnt_target(p)
             if self.is_mount(p, target):
-                cmdline = "%s %s" % (" ".join(self.cmd_umount), target)
-                verbose (cmdline, LOG_DEBUG)
+                args = self.cmd_umount + [target]
+                verbose (" ".join(args), LOG_DEBUG)
                 proc_umnt = Popen( self.cmd_umount + [target], stdout=PIPE, stderr=STDOUT, close_fds=True )
-                warn_if_error(proc_umnt, cmdline)
+                warn_if_error(proc_umnt, args)
                 if proc_umnt.returncode != 0:
-                    cmdline = "%s %s" % (" ".join(self.cmd_umount_force), target)
-                    verbose (cmdline, LOG_DEBUG)
-                    proc_umnt = Popen( self.cmd_umount + [target], stdout=PIPE, stderr=STDOUT, close_fds=True )
-                    exception_if_error(proc_umnt, cmdline)
+                    args = self.cmd_umount_force + [target]
+                    verbose (" ".join(args), LOG_DEBUG)
+                    proc_umnt = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True )
+                    exception_if_error(proc_umnt, args)
 
                 verbose ("remove %s" % target, LOG_DEBUG)
                 if not self.is_mount(p, target):
@@ -358,6 +358,10 @@ keep_empty_dir = no
 
     def commit(self):
         self.scm.commit()
+
+    def post_check(self):
+        self.scm.post_check()
+
 
 
 class GistoreCmd(object):
@@ -402,6 +406,7 @@ class GistoreCmd(object):
         for repos in args:
             GistoreCmd.gistobj = Gistore(repos)
             GistoreCmd.gistobj.status()
+            GistoreCmd.gistobj.post_check()
 
     @staticmethod
     def do_umount(args=[]):
@@ -421,6 +426,7 @@ class GistoreCmd(object):
             GistoreCmd.gistobj.mount()
             GistoreCmd.gistobj.commit()
             GistoreCmd.gistobj.umount()
+            GistoreCmd.gistobj.post_check()
 
     @staticmethod
     def sigint_handler(signum, frame):

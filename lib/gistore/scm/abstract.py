@@ -40,3 +40,6 @@ class AbstractSCM(object):
     def commit(self):
         raise NoImplementError
 
+    def post_check(self):
+        return
+
