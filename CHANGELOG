@@ -6,6 +6,8 @@ New in v0.1.x (2010/01/23)
  -  Fixed: force umount failed. (0.1.2)
  -  New feature: show not backup submodule. (0.1.3)
  -  More signal handler. (0.1.4)
+ -  New command commit_all. (0.1.5)
+ -  Debianized. (0.1.5)
 
 New in v0.1 (2010/01/23)
 ------------------------
