@@ -31,7 +31,7 @@ class SCM(AbstractSCM):
         if self.is_repos():
             verbose("Repos %s already exists." % self.root, LOG_WARNING)
             return False
-        args = ["git", "init", self.root]
+        args = ["git", "init"]
         verbose(" ".join(args), LOG_DEBUG)
         proc = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
         exception_if_error(proc, args)
@@ -43,7 +43,7 @@ class SCM(AbstractSCM):
 
     def commit(self, message="no message"):
         self._abort_if_not_repos()
-        os.chdir(self.root)
+        assert os.path.realpath(os.getcwd()) == self.root
         args = ["git", "add", "."]
         verbose(" ".join(args), LOG_DEBUG)
         proc_add = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
