@@ -1,3 +1,10 @@
+gistore (0.1.6) unstable; urgency=low
+
+  * Git version belowe 1.6, can not take directory after git init (0.1.6)
+  * Add depends on git-core.
+
+ -- Jiang Xin <worldhello.net@gmail.com>  Thu, 28 Jan 2010 19:48:04 +0800
+
 gistore (0.1.5) unstable; urgency=low
 
   * Fixed: create /etc/gistore on the fly, and fixed setuptools in-compatible

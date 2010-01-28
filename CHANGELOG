@@ -8,6 +8,7 @@ New in v0.1.x (2010/01/23)
  -  More signal handler. (0.1.4)
  -  New command commit_all. (0.1.5)
  -  Debianized. (0.1.5)
+ -  Git version belowe 1.6, can not take directory after git init (0.1.6)
 
 New in v0.1 (2010/01/23)
 ------------------------
