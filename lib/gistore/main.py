@@ -505,7 +505,7 @@ class GistoreCmd(object):
         if not args:
             return GistoreCmd.usage(0)
 
-        command = args[0].lower()
+        command = args[0].lower().replace('-','_')
         # Command aliases
         if command in ['unmount', 'umnt', 'unmnt']:
             command = 'umount'
