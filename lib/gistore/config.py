@@ -27,7 +27,7 @@ LOG_NONE=0
 GISTORE_CONFIG_DIR=".gistore"
 
 class DefaultConfig(object):
-    sys_config_dir = '/etc/gistore'
+    sys_config_dir = os.environ.get('GISTORE_ETC') or '/etc/gistore'
     backend = "git"
     root_only = True
     log_level = LOG_WARNING
@@ -35,11 +35,24 @@ class DefaultConfig(object):
     store_list = {'default': None }
 
 def initConfig():
-    if os.path.exists(DefaultConfig.sys_config_dir):
+    task_dir = os.path.join(DefaultConfig.sys_config_dir, 'tasks')
+    if not os.path.exists(task_dir):
+        try:
+            os.makedirs(task_dir)
+        except OSError:
+            print >> sys.stderr, "no permisson to create dir: %s" % task_dir
+            return
+
+    config_file = os.path.join(DefaultConfig.sys_config_dir, 'local_config.py')
+    if os.path.exists(config_file):
         return
-    os.makedirs(os.path.join(DefaultConfig.sys_config_dir, 'tasks'))
-    fp = open(os.path.join(DefaultConfig.sys_config_dir, 'local_config.py'), "w")
-    fp.write("""# -*- coding: utf-8 -*-
+
+    try:
+        fp = open(config_file, "w")
+    except IOError:
+        print >> sys.stderr, "no permisson to create file: %s" % config_file
+    else:
+        fp.write("""# -*- coding: utf-8 -*-
 #
 # gistore -- Backup files using DVCS, such as git.
 # Copyright (C) 2010 Jiang Xin <jiangxin@ossxp.com>
@@ -70,12 +83,12 @@ class Config(DefaultConfig):
 
 # vim: et ts=4 sw=4
 """)
-    fp.close()
+        fp.close()
 
 def getConfig():
     try:
         #Initial sys_config_dir if not exists.
-        if not os.path.exists(DefaultConfig.sys_config_dir) and os.getuid() == 0:
+        if not os.path.exists(os.path.join(DefaultConfig.sys_config_dir, 'local_config.py')):
             initConfig()
 
         # load custom config file in /etc/gistore/local_config.py
