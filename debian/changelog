@@ -1,3 +1,10 @@
+gistore (0.2.0) unstable; urgency=low
+
+  * New storage policy: seperate git-dir and work-tree.
+  * Tag blank commit as gistore/0 for latter use.
+
+ -- Jiang Xin <worldhello.net@gmail.com>  Thu, 22 Jul 2010 21:18:56 +0800
+
 gistore (0.1.6) unstable; urgency=low
 
   * Git version belowe 1.6, can not take directory after git init (0.1.6)
