@@ -29,7 +29,7 @@ GISTORE_CONFIG_DIR=".gistore"
 class DefaultConfig(object):
     sys_config_dir = os.environ.get('GISTORE_ETC') or '/etc/gistore'
     backend = "git"
-    root_only = True
+    root_only = False
     log_level = LOG_WARNING
     task = None
     store_list = {'default': None }

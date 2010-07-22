@@ -19,6 +19,8 @@ from gistore.errors import *
 
 class AbstractSCM(object):
 
+    WORK_TREE = "."
+
     def __init__(self, root=""):
         self.set_root(root)
 

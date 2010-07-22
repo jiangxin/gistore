@@ -14,9 +14,9 @@
 # GNU General Public License for more details.
 #
 
-from subprocess import Popen, PIPE, STDOUT
 import os
 import re
+import subprocess
 
 from gistore.scm.abstract import AbstractSCM
 from gistore.utils import *
@@ -24,51 +24,158 @@ from gistore.config import *
 
 class SCM(AbstractSCM):
 
-    def is_repos(self):
-        return os.path.exists( os.path.join(self.root, '.git', 'objects') )
+    GIT_DIR = "repo.git"
+    WORK_TREE = "run-time"
+
+    def get_command(self):
+        return [ "git",
+                 "--git-dir=%s" % os.path.join(self.root, self.GIT_DIR),
+                 "--work-tree=%s" % os.path.join(self.root, self.WORK_TREE),
+               ]
+
+    command = property(get_command)
+
+
+    def _is_repos(self):
+        return os.path.exists( os.path.join(self.root, self.GIT_DIR, 'objects') )
+
 
     def init(self):
-        if self.is_repos():
+        if self._is_repos():
             verbose("Repos %s already exists." % self.root, LOG_WARNING)
             return False
-        args = ["git", "init"]
-        verbose(" ".join(args), LOG_DEBUG)
-        proc = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
-        exception_if_error(proc, args)
+
+        work_tree = os.path.join(self.root, self.WORK_TREE)
+        if not os.path.exists(work_tree):
+            os.makedirs(work_tree)
+
+        commands = [ 
+                    # git init command can not work with --work-tree arguments.
+                    [ "git", "init", "--bare", os.path.join(self.root, self.GIT_DIR) ],
+
+                    # a empty commit is used as root commit of rotate backup
+                    self.command + [ "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
+
+                    # tag the empty commit as gistore/0, never delete it.
+                    self.command + [ "tag", "gistore/0" ],
+
+                    # set local git config, which not affect by global config
+                    self.command + [ "config", "core.autocrlf", "false" ],
+                    self.command + [ "config", "core.safecrlf", "false" ],
+                    self.command + [ "config", "core.symlinks", "true" ],
+                    self.command + [ "config", "core.trustctime", "false" ],
+                    self.command + [ "config", "core.sharedRepository", "group" ],
+
+                    # in case of merge, use ours instead.
+                    self.command + [ "config", "merge.ours.name", "\"always keep ours\" merge driver" ],
+                    self.command + [ "config", "merge.ours.driver", "touch %A" ],
+                   ]
+
+        for args in commands:
+            verbose(" ".join(args), LOG_DEBUG)
+            proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            exception_if_error(proc, args)
+
         verbose("create .gitignore", LOG_DEBUG)
-        fp = open(os.path.join(self.root, ".gitignore"), "w")
-        fp.write(GISTORE_CONFIG_DIR)
-        fp.write("\n")
+        fp = open(os.path.join(self.root, self.WORK_TREE, ".gitignore"), "w")
+        fp.write(".gistore*\n")
         fp.close()
+
+
+    def upgrade(self, old):
+        if old < 2:
+            self.upgrade_2()
+
+
+    def upgrade_2(self):
+        if self.GIT_DIR != ".git":
+            oldgit = os.path.join(self.root, ".git")
+            if os.path.exists( oldgit ):
+                os.rename( oldgit, os.path.join(self.root, self.GIT_DIR) )
+
+        work_tree = os.path.join(self.root, self.WORK_TREE)
+        if not os.path.exists(work_tree):
+            os.makedirs(work_tree)
+
+        commands = []
+        args = self.command + [ "show-ref" ]
+        returncode = subprocess.call( args=args, stdout=sys.stderr, close_fds=True )
+        # repo.git has no commit yet
+        if returncode != 0:
+            commands += [
+                          # a empty commit is used as root commit of rotate backup
+                          self.command + [ "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
+
+                          # tag the empty commit as gistore/0, never delete it.
+                          self.command + [ "tag", "gistore/0" ],
+                         ]
+        else:
+            commands += [
+                          # switch to a unexist ref
+                          self.command + [ "symbolic-ref", "HEAD", "refs/tags/gistore/0" ],
+
+                          # remove cached index
+                          self.command + [ "rm", "--cached", "-r", "-f", "." ],
+
+                          # a empty commit is used as root commit of rotate backup
+                          self.command + [ "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
+
+                          # switch to master
+                          self.command + [ "symbolic-ref", "HEAD", "refs/heads/master" ],
+                          self.command + [ "reset", "HEAD" ],
+                         ]
+
+        commands +=[ 
+                    # set local git config, which not affect by global config
+                    self.command + [ "config", "core.autocrlf", "false" ],
+                    self.command + [ "config", "core.safecrlf", "false" ],
+                    self.command + [ "config", "core.symlinks", "true" ],
+                    self.command + [ "config", "core.trustctime", "false" ],
+                    self.command + [ "config", "core.sharedRepository", "group" ],
+
+                    # in case of merge, use ours instead.
+                    self.command + [ "config", "merge.ours.name", "\"always keep ours\" merge driver" ],
+                    self.command + [ "config", "merge.ours.driver", "touch %A" ],
+                   ]
+
+        for args in commands:
+            verbose(" ".join(args), LOG_DEBUG)
+            proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            exception_if_error(proc, args)
+
 
     def commit(self, message="no message"):
         self._abort_if_not_repos()
         assert os.path.realpath(os.getcwd()) == self.root
-        args = ["git", "add", "."]
+        if True:
+            args = self.command + [ "add", "." ]
+        else:
+            args = self.command + [ "add", "-A", "." ]
         verbose(" ".join(args), LOG_DEBUG)
-        proc_add = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
+        proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         exception_if_error(proc_add, args)
 
-        args = ["git", "ls-files", "--deleted"]
-        verbose(" ".join(args), LOG_DEBUG)
-        proc_ls = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
-        for file in proc_ls.stdout.readlines():
-            # strip last CRLF
-            file = file.rstrip()
-            if not os.path.isdir(file):
-                # git removes directories when the last file
-                # in them is removed, but empty directories
-                # may be significant. Touch a flag file to
-                # prevent git from removing the directory.
-                flagfile=""
-                if os.path.exists(os.path.dirname(file)) and not os.listdir(os.path.dirname(file)):
-                    flagfile=os.path.join(os.path.dirname(file), ".gistore-keep-empty")
-                    os.mknod(flagfile, 0644)
-                args = ["git", "rm", "--quiet", file]
-                proc_rm = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
-                warn_if_error(proc_rm, args)
-                if flagfile:
-                    os.unlink(flagfile)
+        if True:
+            args = self.command + [ "ls-files", "--deleted" ]
+            verbose(" ".join(args), LOG_DEBUG)
+            proc_ls = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            for file in proc_ls.stdout.readlines():
+                # strip last CRLF
+                file = file.rstrip()
+                if not os.path.isdir(file):
+                    # git removes directories when the last file
+                    # in them is removed, but empty directories
+                    # may be significant. Touch a flag file to
+                    # prevent git from removing the directory.
+                    flagfile=""
+                    if os.path.exists(os.path.dirname(file)) and not os.listdir(os.path.dirname(file)):
+                        flagfile=os.path.join(os.path.dirname(file), ".gistore-keep-empty")
+                        os.mknod(flagfile, 0644)
+                    args = self.command + [ "rm", "--quiet", file ]
+                    proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+                    warn_if_error(proc_rm, args)
+                    if flagfile:
+                        os.unlink(flagfile)
 
         username = os.getenv("SUDO_USER")
         if username:
@@ -76,16 +183,16 @@ class SCM(AbstractSCM):
             os.putenv("GIT_COMMITTER_NAME", username)
             os.putenv("GIT_COMMITTER_EMAIL", username+"@"+socket.gethostname())
 
-        args = ["git", "commit", "--quiet", "-m", message]
+        args = self.command + [ "commit", "--quiet", "-m", message]
         verbose(" ".join(args), LOG_DEBUG)
-        proc_ci = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
+        proc_ci = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         # If nothing to commit, git commit return 1.
         exception_if_error2(proc_ci, args, test=lambda n: n.startswith("nothing to commit"))
 
     def post_check(self):
         submodules = []
-        args = ["git", "submodule", "status", self.root]
-        proc = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True)
+        args = self.command + [ "submodule", "status", self.root]
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         #Read stdout buffer before wait(), because if buffer overflow, process will hang!
         pat1 = re.compile(r".\w{40} (\w*) \(.*\)?")
         pat2 = re.compile(r"No submodule mapping found in .gitmodules for path '(.*)'")

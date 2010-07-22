@@ -14,20 +14,5 @@
 # GNU General Public License for more details.
 #
 
-class NoImplementError(Exception):
-    pass
-
-class CommandError(Exception):
-    pass
-
-class UninitializedRepositoryError(Exception):
-    pass
-
-class PemissionDeniedError(Exception):
-    pass
-
-class TaskNotExistsError(Exception):
-    """Task directory does not exists."""
-
-class TaskAlreadyExistsError(Exception):
-    """Task directory already exists."""
+GISTORE_VERSION_FLAG="0.1.2"
+GISTORE_VERSION=2
