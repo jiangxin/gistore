@@ -126,6 +126,9 @@ class SCM(AbstractSCM):
                          ]
 
         commands +=[ 
+                    # set as bare repos
+                    self.command + [ "config", "core.bare", "true" ],
+
                     # set local git config, which not affect by global config
                     self.command + [ "config", "core.autocrlf", "false" ],
                     self.command + [ "config", "core.safecrlf", "false" ],
