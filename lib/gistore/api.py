@@ -413,12 +413,14 @@ class Gistore(object):
 
         for target, src in sorted( mount_list, reverse=True ):
             verbose ("remove %s" % target, LOG_DEBUG)
-            if not self.is_mount(src, target):
+            if not self.is_mount(src, target) and target.startswith( mount_root ) and target != mount_root :
                 if os.path.isdir(target):
                     self.removedirs(target)
                 else:
                     os.unlink(target)
-                    self.removedirs(os.path.dirname(target))
+                    target = os.path.dirname( target )
+                    if target.startswith( mount_root ) and target != mount_root :
+                        self.removedirs( target )
 
         self.unlock("mount")
 
