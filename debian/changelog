@@ -1,3 +1,11 @@
+gistore (0.2.0+) unstable; urgency=low
+
+  * When upgrade gistore from previous version, not forget to set
+    repos as bare=true
+  * Do not delete run-time dir when doing umount.
+
+ -- Jiang Xin <worldhello.net@gmail.com>  Thu, 22 Jul 2010 21:38:37 +0800
+
 gistore (0.2.0) unstable; urgency=low
 
   * New storage policy: seperate git-dir and work-tree.
