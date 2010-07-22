@@ -83,8 +83,12 @@ class GistoreCmd(object):
         if not args:
             args = [None]
         for repos in args:
-            GistoreCmd.gistobj = Gistore(repos)
-            GistoreCmd.gistobj.mount()
+            try:
+                GistoreCmd.gistobj = Gistore(repos)
+                GistoreCmd.gistobj.mount()
+            except GistoreLockError, e:
+                show_exception(e)
+                continue
 
     @staticmethod
     def do_init(args=[]):
@@ -122,8 +126,12 @@ class GistoreCmd(object):
         if not args:
             args = [None]
         for repos in args:
-            GistoreCmd.gistobj = Gistore(repos)
-            GistoreCmd.gistobj.umount()
+            try:
+                GistoreCmd.gistobj = Gistore(repos)
+                GistoreCmd.gistobj.umount()
+            except GistoreLockError, e:
+                show_exception(e)
+                continue
 
 
     @staticmethod
@@ -144,11 +152,15 @@ class GistoreCmd(object):
         if not args:
             args = [None]
         for repos in args:
-            GistoreCmd.gistobj = Gistore(repos)
-            GistoreCmd.gistobj.mount()
-            GistoreCmd.gistobj.commit()
-            GistoreCmd.gistobj.umount()
-            GistoreCmd.gistobj.post_check()
+            try:
+                GistoreCmd.gistobj = Gistore(repos)
+                GistoreCmd.gistobj.mount()
+                GistoreCmd.gistobj.commit()
+                GistoreCmd.gistobj.umount()
+                GistoreCmd.gistobj.post_check()
+            except GistoreLockError, e:
+                show_exception(e)
+                continue
 
     @staticmethod
     def sigint_handler(signum, frame):
@@ -248,6 +260,8 @@ class GistoreCmd(object):
                 getattr(GistoreCmd, 'do_' + command)(args)
             else:
                 return GistoreCmd.usage(1, "Unknown command: %s" % command)
+        except GistoreLockError, e:
+            raise e
         except Exception, e:
             show_exception(e)
             GistoreCmd.sigint_handler

@@ -29,7 +29,6 @@ class Gistore(object):
     def __init__(self, task=None, create=False):
         self.root = None
         self.scm = None
-        self.mounted = False
 
         self.cmd_mount = ["mount", "--rbind"]
         self.cmd_umount = ["umount"]
@@ -76,8 +75,6 @@ class Gistore(object):
                 os.makedirs(self.root)
         elif not os.path.exists( os.path.join(self.root, GISTORE_CONFIG_DIR, "config") ):
                 raise TaskNotExistsError("Task does not exists: %s." % os.path.join(self.root, GISTORE_CONFIG_DIR, "config") )
-
-        os.chdir(self.root)
 
         # Taskname is the abbr. link dir name in /etc/gistore/tasks/
         self.taskname = self.dir2task(self.root)
@@ -344,8 +341,8 @@ class Gistore(object):
             return os.path.join( self.root, self.scm.WORK_TREE, p.lstrip('/'))
 
     def mount(self):
-        if self.store_list:
-            self.mounted = True
+        self.lock("mount")
+
         for p in self.store_list.keys():
             if os.path.isdir(p):
                 target = self.__mnt_target(p)
@@ -381,6 +378,8 @@ class Gistore(object):
         self.removedirs(os.path.dirname(target))
 
     def umount(self):
+        self.assert_no_lock("commit")
+
         for p in self.store_list.keys():
             target = self.__mnt_target(p)
             if self.is_mount(p, target):
@@ -401,17 +400,51 @@ class Gistore(object):
                     else:
                         os.unlink(target)
                         self.removedirs(os.path.dirname(target))
-        self.mounted = False
+
+        self.unlock("mount")
 
     def cleanup(self):
-        if self.mounted:
-            self.umount()
+        self.umount()
 
     def commit(self):
+        self.assert_lock("mount")
+        self.lock("commit")
         self.scm.commit()
+        self.unlock("commit")
 
     def post_check(self):
         self.scm.post_check()
 
+    def has_lock(self, event):
+        lockfile = os.path.join( self.root, GISTORE_CONFIG_DIR, ".gistore-lock-" + event )
+        if os.path.exists( lockfile ):
+            return True
+        else:
+            return False
+
+    def lock(self, event):
+        self.assert_no_lock(event)
+
+        lockfile = os.path.join( self.root, GISTORE_CONFIG_DIR, ".gistore-lock-" + event )
+        f = open( lockfile, 'w' )
+        f.write( str( os.getpid() ) )
+        f.close()
+
+    def assert_lock(self, event):
+        lockfile = os.path.join( self.root, GISTORE_CONFIG_DIR, ".gistore-lock-" + event )
+        if not os.path.exists( lockfile ):
+            raise GistoreLockError( "Has not lock using: %s" % lockfile )
+
+    def assert_no_lock(self, event):
+        lockfile = os.path.join( self.root, GISTORE_CONFIG_DIR, ".gistore-lock-" + event )
+        if os.path.exists( lockfile ):
+            raise GistoreLockError( "Lock already exists: %s" % lockfile )
+
+    def unlock(self, event):
+        lockfile = os.path.join( self.root, GISTORE_CONFIG_DIR, ".gistore-lock-" + event )
+        try:
+            os.unlink( lockfile )
+        except OSError:
+            pass
 
 # vim: et ts=4 sw=4

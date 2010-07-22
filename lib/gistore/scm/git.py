@@ -146,7 +146,7 @@ class SCM(AbstractSCM):
 
     def commit(self, message="no message"):
         self._abort_if_not_repos()
-        assert os.path.realpath(os.getcwd()) == self.root
+
         if True:
             args = self.command + [ "add", "." ]
         else:

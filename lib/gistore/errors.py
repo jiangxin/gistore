@@ -31,3 +31,6 @@ class TaskNotExistsError(Exception):
 
 class TaskAlreadyExistsError(Exception):
     """Task directory already exists."""
+
+class GistoreLockError(Exception):
+    """Lock failed."""
