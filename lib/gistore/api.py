@@ -391,7 +391,12 @@ class Gistore(object):
                     args = self.cmd_umount_force + [target]
                     verbose (" ".join(args), LOG_DEBUG)
                     proc_umnt = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True )
-                    exception_if_error(proc_umnt, args)
+                    line = proc_umnt.stdout.readline().rstrip()
+                    proc_umnt.wait()
+                    if proc_umnt.returncode != 0:
+                        if line.endswith("not mounted"):
+                            continue
+                        raise CommandError("Last command: %s\n\tgenerate ERRORS with returncode %d!" % (" ".join(args), proc_umnt.returncode))
 
                 verbose ("remove %s" % target, LOG_DEBUG)
                 if not self.is_mount(p, target):
