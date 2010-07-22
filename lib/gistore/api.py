@@ -16,6 +16,7 @@
 
 import os
 import sys
+import re
 from subprocess import Popen, PIPE, STDOUT
 from copy import deepcopy
 
@@ -380,31 +381,44 @@ class Gistore(object):
     def umount(self):
         self.assert_no_lock("commit")
 
-        for p in self.store_list.keys():
-            target = self.__mnt_target(p)
-            if self.is_mount(p, target):
-                args = self.cmd_umount + [target]
-                verbose (" ".join(args), LOG_DEBUG)
-                proc_umnt = Popen( self.cmd_umount + [target], stdout=PIPE, stderr=STDOUT, close_fds=True )
-                warn_if_error(proc_umnt, args)
-                if proc_umnt.returncode != 0:
-                    args = self.cmd_umount_force + [target]
-                    verbose (" ".join(args), LOG_DEBUG)
-                    proc_umnt = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True )
-                    line = proc_umnt.stdout.readline().rstrip()
-                    proc_umnt.wait()
-                    if proc_umnt.returncode != 0:
-                        if line.endswith("not mounted"):
-                            continue
-                        raise CommandError("Last command: %s\n\tgenerate ERRORS with returncode %d!" % (" ".join(args), proc_umnt.returncode))
+        proc = Popen([ "mount" ], stdout=PIPE, stderr=STDOUT, close_fds=True )
+        pattern = re.compile(r"^(.*) on (.*) type .*$")
+        mount_root = os.path.realpath( os.path.join( self.root, self.scm.WORK_TREE) )
+        mount_list = []
+        for line in proc.stdout.readlines():
+            line = line.rstrip()
+            m = pattern.search(line)
+            if m:
+                src = m.group(1)
+                target = os.path.realpath( m.group(2) )
+                if target.startswith( mount_root ):
+                    mount_list.append( (target, src, ) )
+        proc.wait()
 
-                verbose ("remove %s" % target, LOG_DEBUG)
-                if not self.is_mount(p, target):
-                    if os.path.isdir(target):
-                        self.removedirs(target)
-                    else:
-                        os.unlink(target)
-                        self.removedirs(os.path.dirname(target))
+        for target, src in sorted( mount_list, reverse=True ):
+            args = self.cmd_umount + [ target ]
+            verbose (" ".join(args), LOG_DEBUG)
+            proc_umnt = Popen( args, stdout=PIPE, stderr=STDOUT, close_fds=True )
+            warn_if_error(proc_umnt, args)
+            if proc_umnt.returncode != 0:
+                args = self.cmd_umount_force + [ target ]
+                verbose (" ".join(args), LOG_DEBUG)
+                proc_umnt = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True )
+                line = proc_umnt.stdout.readline().rstrip()
+                proc_umnt.wait()
+                if proc_umnt.returncode != 0:
+                    if line.endswith("not mounted"):
+                        continue
+                    raise CommandError("Last command: %s\n\tgenerate ERRORS with returncode %d!" % (" ".join(args), proc_umnt.returncode))
+
+        for target, src in sorted( mount_list, reverse=True ):
+            verbose ("remove %s" % target, LOG_DEBUG)
+            if not self.is_mount(src, target):
+                if os.path.isdir(target):
+                    self.removedirs(target)
+                else:
+                    os.unlink(target)
+                    self.removedirs(os.path.dirname(target))
 
         self.unlock("mount")
 
