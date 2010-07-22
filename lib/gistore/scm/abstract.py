@@ -34,13 +34,13 @@ class AbstractSCM(object):
             raise UninitializedRepositoryError
 
     def is_repos(self):
-        raise NoImplementError
+        raise NoImplementError("not implement is_repos")
 
     def init(self):
-        raise NoImplementError
+        raise NoImplementError("not implement init")
 
     def commit(self):
-        raise NoImplementError
+        raise NoImplementError("not implement commit")
 
     def post_check(self):
         return

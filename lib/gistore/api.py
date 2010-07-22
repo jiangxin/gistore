@@ -152,7 +152,6 @@ class Gistore(object):
                          ) )
 
         store_buffer = []
-        print self.store_list
         for path in sorted(self.store_list.keys()):
             if self.store_list[path].get('_system_', False):
                 continue
@@ -337,10 +336,12 @@ class Gistore(object):
                     v.get("keep_empty_dir") and "K" or "-")
 
     def __mnt_target(self, p):
+        assert self.scm.WORK_TREE == 'run-time'
+
         if p == os.path.join(self.root, GISTORE_CONFIG_DIR):
-            return os.path.join(self.root, GISTORE_CONFIG_DIR.rstrip('/')+"_history")
+            return os.path.join( self.root, self.scm.WORK_TREE, GISTORE_CONFIG_DIR.rstrip('/') )
         else:
-            return os.path.join(self.root, p.lstrip('/'))
+            return os.path.join( self.root, self.scm.WORK_TREE, p.lstrip('/'))
 
     def mount(self):
         if self.store_list:

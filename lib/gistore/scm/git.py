@@ -36,12 +36,12 @@ class SCM(AbstractSCM):
     command = property(get_command)
 
 
-    def _is_repos(self):
+    def is_repos(self):
         return os.path.exists( os.path.join(self.root, self.GIT_DIR, 'objects') )
 
 
     def init(self):
-        if self._is_repos():
+        if self.is_repos():
             verbose("Repos %s already exists." % self.root, LOG_WARNING)
             return False
 
@@ -78,7 +78,7 @@ class SCM(AbstractSCM):
 
         verbose("create .gitignore", LOG_DEBUG)
         fp = open(os.path.join(self.root, self.WORK_TREE, ".gitignore"), "w")
-        fp.write(".gistore*\n")
+        fp.write(".gistore-*\n")
         fp.close()
 
 
