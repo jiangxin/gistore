@@ -406,10 +406,10 @@ class Gistore(object):
     def cleanup(self):
         self.umount()
 
-    def commit(self):
+    def commit(self, message):
         self.assert_lock("mount")
         self.lock("commit")
-        self.scm.commit()
+        self.scm.commit( message )
         self.unlock("commit")
 
     def post_check(self):

@@ -183,7 +183,7 @@ class SCM(AbstractSCM):
             os.putenv("GIT_COMMITTER_NAME", username)
             os.putenv("GIT_COMMITTER_EMAIL", username+"@"+socket.gethostname())
 
-        args = self.command + [ "commit", "--quiet", "-m", message]
+        args = self.command + [ "commit", "--quiet", "-m", message or "no message" ]
         verbose(" ".join(args), LOG_DEBUG)
         proc_ci = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         # If nothing to commit, git commit return 1.

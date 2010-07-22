@@ -76,6 +76,8 @@ from gistore.versions import *
 
 class GistoreCmd(object):
     opt_verbose = LOG_WARNING
+    opt_message = None
+
     gistobj = None
 
     @staticmethod
@@ -155,7 +157,7 @@ class GistoreCmd(object):
             try:
                 GistoreCmd.gistobj = Gistore(repos)
                 GistoreCmd.gistobj.mount()
-                GistoreCmd.gistobj.commit()
+                GistoreCmd.gistobj.commit( GistoreCmd.opt_message )
                 GistoreCmd.gistobj.umount()
                 GistoreCmd.gistobj.post_check()
             except GistoreLockError, e:
@@ -195,7 +197,7 @@ class GistoreCmd(object):
         global cfg
         try:
             opts, args = getopt.getopt(
-                argv, "hvq",
+                argv, "hvqm:",
                 [ "help", "verbose", "quiet" ])
         except getopt.error, msg:
             return GistoreCmd.usage(1, msg)
@@ -213,6 +215,8 @@ class GistoreCmd(object):
                     GistoreCmd.opt_verbose = LOG_ERR
                 else:
                     GistoreCmd.opt_verbose -= 1
+            elif opt in ('-m'):
+                GistoreCmd.opt_message = arg
 
         if GistoreCmd.opt_verbose is not None:
             cfg.log_level = GistoreCmd.opt_verbose
