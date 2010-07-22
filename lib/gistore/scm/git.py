@@ -145,12 +145,41 @@ class SCM(AbstractSCM):
 
 
     def commit(self, message=None):
+        def commit_summary( commit_st ):
+            sample = 5
+            status = {}
+            buffer = []
+            for line in commit_st:
+                k,v = line.split(None, 1)
+                try:
+                    status[k].append( v )
+                except KeyError:
+                    status[k] = [ v ]
+
+            total = len( commit_st )
+            buffer.append( "Changes summary: total= %(total)d, %(detail)s" % {
+                    'total': total,
+                    'detail': ", ".join( [ "%s: %d" % (k, len(status[k])) for k in sorted(status.keys()) ] ),
+                    } )
+            buffer.append( "-" * len(buffer[0]) )
+            for k in sorted(status.keys()):
+                brief_st = []
+                total = len( status[k] )
+                step = total // sample
+                if step < 1:
+                    brief_st = status[k]
+                else:
+                    for i in range(sample):
+                        brief_st.append( status[k][i*step] )
+                    brief_st.append( "...%d more..." % ( len(status[k]) - sample ) )
+                buffer.append( "    %s => %s" % ( k, ", ".join(brief_st) ) )
+
+            return "\n".join(buffer)
+            
+
         self._abort_if_not_repos()
 
-        if True:
-            args = self.command + [ "add", "." ]
-        else:
-            args = self.command + [ "add", "-A", "." ]
+        args = self.command + [ "add", "." ]
         verbose(" ".join(args), LOG_DEBUG)
         proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         exception_if_error(proc_add, args)
@@ -159,30 +188,45 @@ class SCM(AbstractSCM):
             args = self.command + [ "ls-files", "--deleted" ]
             verbose(" ".join(args), LOG_DEBUG)
             proc_ls = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            deleted_files = []
             for file in proc_ls.stdout.readlines():
                 # strip last CRLF
                 file = file.rstrip()
-                if not os.path.isdir(file):
-                    # git removes directories when the last file
-                    # in them is removed, but empty directories
-                    # may be significant. Touch a flag file to
-                    # prevent git from removing the directory.
-                    flagfile=""
-                    if os.path.exists(os.path.dirname(file)) and not os.listdir(os.path.dirname(file)):
-                        flagfile=os.path.join(os.path.dirname(file), ".gistore-keep-empty")
-                        os.mknod(flagfile, 0644)
-                    args = self.command + [ "rm", "--quiet", file ]
+                deleted_files.append(file)
+            if deleted_files:
+                try:
+                    # `git rm --cached` will not remote blank-dir.
+                    args = self.command + [ "rm", "--cached", "--quiet" ] + deleted_files
                     proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
                     warn_if_error(proc_rm, args)
-                    if flagfile:
-                        os.unlink(flagfile)
+                except OSError, e:
+                    if "Argument list too long" in e:
+                        for file in deleted_files:
+                            args = self.command + [ "rm", "--cached", "--quiet", file ]
+                            proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+                            warn_if_error(proc_rm, args)
+
+        args = self.command + [ "status", "--porcelain" ]
+        verbose(" ".join(args), LOG_DEBUG)
+        proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+        commit_stat = []
+        for line in proc_st.stdout.readlines():
+            # strip last CRLF
+            commit_stat.append( line.rstrip() )
+       
+        if not message:
+            message = ""
+        else:
+            message += "\n\n"
+        
+        message += commit_summary( commit_stat )
 
         username = os.getlogin() or "gistore"
         import socket
         os.putenv("GIT_COMMITTER_NAME", username)
         os.putenv("GIT_COMMITTER_EMAIL", username+"@"+socket.gethostname())
 
-        args = self.command + [ "commit", "--quiet", "-m", message or "no message" ]
+        args = self.command + [ "commit", "--quiet", "-m", message ]
         verbose(" ".join(args), LOG_DEBUG)
         proc_ci = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         # If nothing to commit, git commit return 1.
