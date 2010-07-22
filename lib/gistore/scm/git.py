@@ -144,7 +144,7 @@ class SCM(AbstractSCM):
             exception_if_error(proc, args)
 
 
-    def commit(self, message="no message"):
+    def commit(self, message=None):
         self._abort_if_not_repos()
 
         if True:
@@ -177,11 +177,10 @@ class SCM(AbstractSCM):
                     if flagfile:
                         os.unlink(flagfile)
 
-        username = os.getenv("SUDO_USER")
-        if username:
-            import socket
-            os.putenv("GIT_COMMITTER_NAME", username)
-            os.putenv("GIT_COMMITTER_EMAIL", username+"@"+socket.gethostname())
+        username = os.getlogin() or "gistore"
+        import socket
+        os.putenv("GIT_COMMITTER_NAME", username)
+        os.putenv("GIT_COMMITTER_EMAIL", username+"@"+socket.gethostname())
 
         args = self.command + [ "commit", "--quiet", "-m", message or "no message" ]
         verbose(" ".join(args), LOG_DEBUG)
