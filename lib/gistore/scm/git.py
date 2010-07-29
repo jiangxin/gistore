@@ -24,8 +24,8 @@ from gistore.config import *
 
 class SCM(AbstractSCM):
 
-    GIT_DIR = "repo.git"
-    WORK_TREE = "run-time"
+    GIT_DIR     = "repo.git"
+    WORK_TREE   = "run-time"
 
     def get_command(self):
         return [ "git",
@@ -217,19 +217,19 @@ class SCM(AbstractSCM):
             # strip last CRLF
             commit_stat.append( line.rstrip() )
        
-        if not message:
-            message = ""
-        else:
-            message += "\n\n"
-        
-        message += commit_summary( commit_stat )
+        msgfile = os.path.join( self.root, GISTORE_LOG_DIR, "_gistore-commit-log" )
+        fp = open( msgfile, "w" )
+        if message:
+            fp.write( message + "\n\n" )
+        fp.write( commit_summary( commit_stat ) )
+        fp.close()
 
         username = os.getlogin() or "gistore"
         import socket
         os.putenv("GIT_COMMITTER_NAME", username)
         os.putenv("GIT_COMMITTER_EMAIL", username+"@"+socket.gethostname())
 
-        args = self.command + [ "commit", "--quiet", "-m", message ]
+        args = self.command + [ "commit", "--quiet", "-F", msgfile ]
         verbose(" ".join(args), LOG_DEBUG)
         proc_ci = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         # If nothing to commit, git commit return 1.

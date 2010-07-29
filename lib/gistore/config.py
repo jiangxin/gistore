@@ -24,7 +24,9 @@ LOG_WARNING=2
 LOG_ERR=1
 LOG_NONE=0
 
-GISTORE_CONFIG_DIR=".gistore"
+GISTORE_CONFIG_DIR  = ".gistore"
+GISTORE_LOG_DIR     = "logs"
+GISTORE_LOCK_DIR    = "locks"
 
 class DefaultConfig(object):
     sys_config_dir = os.environ.get('GISTORE_ETC') or '/etc/gistore'

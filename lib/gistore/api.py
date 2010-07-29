@@ -96,11 +96,17 @@ class Gistore(object):
         if old_version is not None and old_version != versions.GISTORE_VERSION:
             self.scm.upgrade(old_version)
 
+        # Check uid
         if os.getuid() != 0:
             if repo_cfg["main.root_only"]:
                 raise PemissionDeniedError("Only root user allowed for task: %s" % (self.taskname or self.root))
-            else:
-                verbose("You are NOT root user, some backups may lost !", LOG_WARNING)
+
+        # Create needed directories
+        check_dirs = [ os.path.join( self.root, GISTORE_LOG_DIR ),
+                       os.path.join( self.root, GISTORE_LOCK_DIR ),]
+        for dir in check_dirs:
+            if not os.path.exists( dir ):
+                os.makedirs( dir )
 
 
     def init(self):
@@ -438,7 +444,7 @@ class Gistore(object):
         self.scm.post_check()
 
     def has_lock(self, event):
-        lockfile = os.path.join( self.root, GISTORE_CONFIG_DIR, ".gistore-lock-" + event )
+        lockfile = os.path.join( self.root, GISTORE_LOCK_DIR, "_gistore-lock-" + event )
         if os.path.exists( lockfile ):
             return True
         else:
@@ -447,23 +453,23 @@ class Gistore(object):
     def lock(self, event):
         self.assert_no_lock(event)
 
-        lockfile = os.path.join( self.root, GISTORE_CONFIG_DIR, ".gistore-lock-" + event )
+        lockfile = os.path.join( self.root, GISTORE_LOCK_DIR, "_gistore-lock-" + event )
         f = open( lockfile, 'w' )
         f.write( str( os.getpid() ) )
         f.close()
 
     def assert_lock(self, event):
-        lockfile = os.path.join( self.root, GISTORE_CONFIG_DIR, ".gistore-lock-" + event )
+        lockfile = os.path.join( self.root, GISTORE_LOCK_DIR, "_gistore-lock-" + event )
         if not os.path.exists( lockfile ):
             raise GistoreLockError( "Has not lock using: %s" % lockfile )
 
     def assert_no_lock(self, event):
-        lockfile = os.path.join( self.root, GISTORE_CONFIG_DIR, ".gistore-lock-" + event )
+        lockfile = os.path.join( self.root, GISTORE_LOCK_DIR, "_gistore-lock-" + event )
         if os.path.exists( lockfile ):
             raise GistoreLockError( "Lock already exists: %s" % lockfile )
 
     def unlock(self, event):
-        lockfile = os.path.join( self.root, GISTORE_CONFIG_DIR, ".gistore-lock-" + event )
+        lockfile = os.path.join( self.root, GISTORE_LOCK_DIR, "_gistore-lock-" + event )
         try:
             os.unlink( lockfile )
         except OSError:
