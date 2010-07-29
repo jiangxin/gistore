@@ -28,6 +28,8 @@ class DefaultConfig(object):
     root_only = False
     log_level = logging.WARNING
     task = None
+    backup_history = 200
+    backup_copies  = 5
     store_list = {'default': None }
 
 def initConfig():

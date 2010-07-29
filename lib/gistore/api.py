@@ -101,16 +101,16 @@ class Gistore(object):
         self.taskname = self.dir2task(self.root)
 
         # Initail self.store_list from .gistore/config file.
-        repo_cfg = self.parse_config()
-        old_version = repo_cfg["main.version"]
+        self.repo_cfg = self.parse_config()
+        old_version = self.repo_cfg["main.version"]
 
         # Upgrade config file if needed.
         if old_version is not None and old_version != versions.GISTORE_VERSION:
-            self.upgrade(repo_cfg)
+            self.upgrade(self.repo_cfg)
 
         # Scm backend initialized.
-        scm = __import__("gistore.scm."+repo_cfg["main.backend"], globals(), {}, ["SCM"])
-        self.scm = scm.SCM(self.root)
+        scm = __import__("gistore.scm."+self.repo_cfg["main.backend"], globals(), {}, ["SCM"])
+        self.scm = scm.SCM(self.root, self.repo_cfg["main.backup_history"], self.repo_cfg["main.backup_copies"])
 
         # Upgrade scm if needed.
         if old_version is not None and old_version != versions.GISTORE_VERSION:
@@ -118,7 +118,7 @@ class Gistore(object):
 
         # Check uid
         if os.getuid() != 0:
-            if repo_cfg["main.root_only"]:
+            if self.repo_cfg["main.root_only"]:
                 raise PemissionDeniedError("Only root user allowed for task: %s" % (self.taskname or self.root))
 
 
@@ -128,6 +128,8 @@ class Gistore(object):
         repo_cfg = {
                     "main.backend": cfg.backend,
                     "main.root_only": cfg.root_only,
+                    "main.backup_history": cfg.backup_history,
+                    "main.backup_copies": cfg.backup_copies,
                     "main.version": versions.GISTORE_VERSION,
                     'default.keep_empty_dir': False,
                     'default.keep_perm': False,
@@ -219,6 +221,8 @@ class Gistore(object):
         repo_cfg = {
                     "main.backend": cfg.backend,
                     "main.root_only": cfg.root_only,
+                    "main.backup_history": cfg.backup_history,
+                    "main.backup_copies": cfg.backup_copies,
                     "main.version": None,
                     'default.keep_empty_dir': False,
                     'default.keep_perm': False,
@@ -292,6 +296,10 @@ class Gistore(object):
                 repo_cfg["main.backend"] = cp.get('main', 'backend')
             if cp.has_option('main', 'root_only'):
                 repo_cfg["main.root_only"] = cp.getboolean('main', 'root_only')
+            if cp.has_option('main', 'backup_history'):
+                repo_cfg["main.backup_history"] = cp.getint('main', 'backup_history')
+            if cp.has_option('main', 'backup_copies'):
+                repo_cfg["main.backup_copies"] = cp.getint('main', 'backup_copies')
             if cp.has_option('main', 'version'):
                 repo_cfg["main.version"] = cp.getint('main', 'version')
             else:
@@ -344,9 +352,11 @@ class Gistore(object):
         return None
 
     def status(self):
-        print "Task name: ", self.taskname and self.taskname or "-"
-        print "Directory: ", self.root
-        print "Backup list:"
+        print "%18s : %s" % ("Task name", self.taskname and self.taskname or "-")
+        print "%18s : %s" % ("Directory", self.root)
+        print "%18s : %s" %  ("Backend", self.repo_cfg["main.backend"])
+        print "%18s : %d commits * %d copies" %  ( "Backup capability", self.repo_cfg["main.backup_history"], self.repo_cfg["main.backup_copies"] )
+        print "%18s :" % "Backup list"
         for k,v in self.store_list.iteritems():
             print "    %s (%s%s)" % (
                     k,

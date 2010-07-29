@@ -30,11 +30,14 @@ class SCM(AbstractSCM):
     GIT_DIR     = "repo.git"
     WORK_TREE   = "run-time"
 
-    def get_command(self):
-        return [ "git",
-                 "--git-dir=%s" % os.path.join(self.root, self.GIT_DIR),
-                 "--work-tree=%s" % os.path.join(self.root, self.WORK_TREE),
-               ]
+    def get_command(self, git_dir=True, work_tree=True):
+        args = [ "git" ]
+        if git_dir:
+            args.append( "--git-dir=%s" % os.path.join(self.root, self.GIT_DIR) )
+        if work_tree:
+            args.append( "--work-tree=%s" % os.path.join(self.root, self.WORK_TREE) )
+
+        return args
 
     command = property(get_command)
 
@@ -150,6 +153,98 @@ class SCM(AbstractSCM):
             exception_if_error(proc, args)
 
 
+    def _get_commit_count(self):
+        args = self.get_command(work_tree=False) + [ "rev-list", "master" ]
+        log.debug(" ".join(args))
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=None, close_fds=True)
+        lines = proc.stdout.readlines()
+        proc.wait()
+        if proc.returncode != 0:
+            msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
+            log.critical( msg )
+            if lines:
+                log.critical( "Command output:\n" + ''.join(lines))
+            raise CommandError( msg )
+
+        log.debug( "Total %d commits in master." % len(lines) )
+        return len(lines)
+
+
+    def backup_rotate(self):
+        if not self.backup_history or self.backup_history < 1:
+            return
+        if not self.backup_copies or self.backup_copies < 1:
+            return
+
+        count = self._get_commit_count()
+        # the first commit is a blank commit
+        if count < self.backup_history + 1:
+            log.debug( "No backup rotate needed. %d < %d." % (count-1, self.backup_history) )
+            return
+
+        log.info( "Begin backup rotate, for %d >= %d." % (count-1, self.backup_history) )
+        # list tags
+        args = self.get_command(work_tree=False) + [ "tag" ]
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=None, close_fds=True)
+        lines = sorted(proc.stdout.readlines())
+        proc.wait()
+        if proc.returncode != 0:
+            msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
+            log.critical( msg )
+            if lines:
+                log.critical( "Command output:\n" + ''.join(lines))
+            raise CommandError( msg )
+        tagids = []
+        for tag in lines:
+            tag=tag.strip()
+            if not tag.startswith("gistore/"):
+                continue
+            try:
+                tagN = int(tag[8:])
+            except ValueError:
+                continue
+            if tagN == 0:
+                continue
+            tagids.append( tagN )
+
+        command_list = []
+        tagids = sorted( tagids )
+
+        # rotate tags, and add new tag
+        if len(tagids) >= self.backup_copies:
+            for i in range(1, self.backup_copies):
+                cmd = self.get_command(work_tree=False) + [ "tag", "-f", "gistore/%d" % i, "gistore/%d" % tagids[ i - self.backup_copies ] ]
+                command_list.append(cmd)
+            for i in tagids:
+                if i in range(1, self.backup_copies):
+                    continue
+                cmd = self.get_command(work_tree=False) + [ "tag", "-d", "gistore/%d" % i ]
+                command_list.append(cmd)
+            cmd = self.get_command(work_tree=False) + [ "tag", "gistore/%d" % self.backup_copies, "master" ]
+            command_list.append(cmd)
+        else:
+            if len(tagids) > 0:
+                cmd = self.get_command(work_tree=False) + [ "tag", "gistore/%d" % (tagids[-1] + 1), "master" ]
+            else:
+                cmd = self.get_command(work_tree=False) + [ "tag", "gistore/1", "master" ]
+            command_list.append(cmd)
+
+        # reset master to gistore/0
+        cmd = self.get_command(work_tree=False) + [ "update-ref", "refs/heads/master", "gistore/0" ]
+        command_list.append(cmd)
+        # do gc
+        cmd = self.get_command(work_tree=False) + [ "gc" ]
+        command_list.append(cmd)
+        # reset HEAD
+        cmd = self.get_command() + [ "reset", "HEAD" ]
+        command_list.append(cmd)
+
+        for i in range(len(command_list)):
+            log.debug( "Backup rotate step %d: %s" % (i, ' '.join(command_list[i])) )
+            proc = subprocess.Popen(command_list[i], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            exception_if_error(proc, command_list[i])
+
+
     def commit(self, message=None):
         def commit_summary( commit_st ):
             sample = 5
@@ -181,9 +276,11 @@ class SCM(AbstractSCM):
                 buffer.append( "    %s => %s" % ( k, ", ".join(brief_st) ) )
 
             return "\n".join(buffer)
-            
 
         self._abort_if_not_repos()
+
+        # Check if backup needs rotate
+        self.backup_rotate()
 
         args = self.command + [ "add", "." ]
         log.debug(" ".join(args))
