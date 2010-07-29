@@ -1,3 +1,9 @@
+gistore (0.2.2) unstable; urgency=low
+
+  * Backup rotate support. Default backup 200 commits * 5 copies.
+
+ -- Jiang Xin <worldhello.net@gmail.com>  Thu, 29 Jul 2010 20:14:28 +0800
+
 gistore (0.2.1) unstable; urgency=low
 
   * logging to file: logs/gistore.log.
