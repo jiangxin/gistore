@@ -169,8 +169,8 @@ class GistoreCmd(object):
         """Do umount and others cleanups if receive SIGINT.
         """
         verbose("Catch SIGINT...", LOG_DEBUG)
-        signal.signal(signal.SIGINT, signal.default_int_handler)
         GistoreCmd.cleanup()
+        signal.signal(signal.SIGINT, signal.default_int_handler)
         sys.exit(1)
 
     @staticmethod
