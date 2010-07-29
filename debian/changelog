@@ -1,3 +1,12 @@
+gistore (0.2.1) unstable; urgency=low
+
+  * logging to file: logs/gistore.log.
+  * save commit log to file
+  * unlock commit in cleanup().
+  * cleanup before restore signal.
+
+ -- Jiang Xin <worldhello.net@gmail.com>  Thu, 29 Jul 2010 16:10:41 +0800
+
 gistore (0.2.0+) unstable; urgency=low
 
   * When upgrade gistore from previous version, not forget to set
