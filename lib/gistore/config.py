@@ -69,10 +69,11 @@ from gistore.config import DefaultConfig
 DEFAULT_BACKUPS = []
 
 ##Example: dynamic backup list
-# import os
-# BACKUP_LIST_CMD='/opt/ossxp/bin/ossxp_pkgadmin.py list_backup'
-# for line in os.popen(BACKUP_LIST_CMD).readlines():
-#     DEFAULT_BACKUPS.append(line.strip())
+#import subprocess
+#proc = subprocess.Popen(['python', '/opt/ossxp/bin/ossxp_pkgadmin.py', 'list_backup'], stdout=subprocess.PIPE, stderr=open('/dev/null', 'w'), close_fds=True)
+#for line in proc.stdout.readlines():
+#    DEFAULT_BACKUPS.append(line.strip())
+#proc.wait()
 
 class Config(DefaultConfig):
     store_list = {'default': DEFAULT_BACKUPS }
