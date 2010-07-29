@@ -425,6 +425,7 @@ class Gistore(object):
         self.unlock("mount")
 
     def cleanup(self):
+        self.unlock("commit")
         self.umount()
 
     def commit(self, message):
