@@ -18,6 +18,9 @@ import os
 from signal import SIGINT
 from gistore.config import *
 from gistore.errors import *
+import logging
+
+log = logging.getLogger('gist.utils')
 
 def warn_if_error(proc, cmdline="", stdout=None):
     if isinstance(cmdline, (list,tuple)):
@@ -25,10 +28,16 @@ def warn_if_error(proc, cmdline="", stdout=None):
     if stdout is None:
         stdout = proc.stdout
     #Read stdout buffer before wait(), because if buffer overflow, process will hang!
-    verbose(stdout.read().rstrip(), LOG_INFO)
+    buffer = stdout.read().rstrip()
     proc.wait()
     if proc.returncode != 0:
-        verbose("Last command: %s\n\tgenerate warnings with returncode %d." % (cmdline, proc.returncode), LOG_WARNING)
+        log.warning("Last command: %s\n\tgenerate warnings with returncode %d." % (cmdline, proc.returncode))
+        if buffer:
+            log.warning( "Command output:\n" + buffer )
+    else:
+        if buffer:
+            log.debug("command: %s" % cmdline)
+            log.debug( "output:\n" + buffer )
 
 def exception_if_error(proc, cmdline="", stdout=None):
     if isinstance(cmdline, (list,tuple)):
@@ -36,10 +45,18 @@ def exception_if_error(proc, cmdline="", stdout=None):
     if stdout is None:
         stdout = proc.stdout
     #Read stdout buffer before wait(), because if buffer overflow, process will hang!
-    verbose(stdout.read().rstrip(), LOG_INFO)
+    buffer = stdout.read().rstrip()
     proc.wait()
     if proc.returncode != 0:
-        raise CommandError("Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode))
+        msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
+        log.critical( msg )
+        if buffer:
+            log.critical( "Command output:\n" + buffer )
+        raise CommandError( msg )
+    else:
+        if buffer:
+            log.debug("Command: %s" % cmdline)
+            log.debug( "Command output:\n" + buffer )
 
 def exception_if_error2(proc, cmdline="", stdout=None, test=None):
     if isinstance(cmdline, (list,tuple)):
@@ -48,48 +65,31 @@ def exception_if_error2(proc, cmdline="", stdout=None, test=None):
         stdout = proc.stdout
     #Read stdout buffer before wait(), because if buffer overflow, process will hang!
     success = False
-    for line in stdout:
+    lines = stdout.readlines()
+    for line in lines:
         if not success and test and test(line):
             success = True
-            verbose("match line: %s" % line, LOG_DEBUG)
-        verbose(line, LOG_INFO)
+            log.debug("Found matched line: %s" % line.rstrip())
 
     proc.wait()
 
     if not success and proc.returncode != 0:
-        raise CommandError("Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode))
+        msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
+        log.critical( msg )
+        if lines:
+            log.critical( "Command output:\n" + ''.join(lines))
+        raise CommandError( msg )
+    else:
+        if lines:
+            log.debug("Command: %s" % cmdline)
+            log.debug( "Command output:\n" + ''.join(lines))
 
-def show_exception(e):
+
+def get_exception(e):
     traceback = True
     if '__module__' in dir(e) and e.__module__.startswith("gistore"):
         traceback = False
-    print >> sys.stderr, ("Exception caught abort: %s" %
-                          exception_to_unicode(e, traceback=traceback))
-
-def verbose(args, level=LOG_INFO, show_prompt=True):
-    if level <= cfg.log_level and args:
-        firstline = True
-        for line in args.splitlines():
-            if line:
-                if level == LOG_ERR:
-                    prompt = "error>"
-                elif level == LOG_WARNING:
-                    prompt = "warning>"
-                elif level == LOG_NOTICE:
-                    prompt = "notice>"
-                elif level == LOG_INFO:
-                    prompt = "info>"
-                elif level == LOG_DEBUG:
-                    prompt = "debug>"
-                if show_prompt:
-                    if firstline:
-                        firstline = False
-                        print >> sys.stderr, prompt,
-                    else:
-                        print >> sys.stderr, " " * len(prompt),
-                print >> sys.stderr, line
-            else:
-                print >> sys.stderr, ""
+    return "Exception caught abort: %s" % exception_to_unicode(e, traceback=traceback)
 
 
 # exception_to_unicode and to_unicode is borrowed from Trac.

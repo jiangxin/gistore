@@ -19,11 +19,14 @@ import sys
 import re
 from subprocess import Popen, PIPE, STDOUT
 from copy import deepcopy
+import logging
 
 from gistore.utils  import *
 from gistore.config import *
 from gistore.errors import *
 from gistore        import versions
+
+log = logging.getLogger('gist.api')
 
 class Gistore(object):
 
@@ -77,6 +80,23 @@ class Gistore(object):
         elif not os.path.exists( os.path.join(self.root, GISTORE_CONFIG_DIR, "config") ):
                 raise TaskNotExistsError("Task does not exists: %s." % os.path.join(self.root, GISTORE_CONFIG_DIR, "config") )
 
+        # Create needed directories
+        check_dirs = [ os.path.join( self.root, GISTORE_LOG_DIR ),
+                       os.path.join( self.root, GISTORE_LOCK_DIR ),]
+        for dir in check_dirs:
+            if not os.path.exists( dir ):
+                os.makedirs( dir )
+
+        # Set file log
+        filelog = logging.FileHandler( os.path.join( self.root, GISTORE_LOG_DIR, "gitstore.log" ) )
+        filelog.setLevel( cfg.log_level )
+        # set a format which is simpler for filelog use
+        formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+        filelog.setFormatter(formatter)
+        # add the handler to the root logger
+        logging.getLogger('').addHandler(filelog)
+
+
         # Taskname is the abbr. link dir name in /etc/gistore/tasks/
         self.taskname = self.dir2task(self.root)
 
@@ -101,12 +121,6 @@ class Gistore(object):
             if repo_cfg["main.root_only"]:
                 raise PemissionDeniedError("Only root user allowed for task: %s" % (self.taskname or self.root))
 
-        # Create needed directories
-        check_dirs = [ os.path.join( self.root, GISTORE_LOG_DIR ),
-                       os.path.join( self.root, GISTORE_LOCK_DIR ),]
-        for dir in check_dirs:
-            if not os.path.exists( dir ):
-                os.makedirs( dir )
 
 
     def init(self):
@@ -238,30 +252,30 @@ class Gistore(object):
                     # Remove duplicate path
                     if len(targets) and ( targets[-1] == p or
                        p.startswith(os.path.join(targets[-1],'')) ):
-                        verbose("duplict path: %s" % p, LOG_WARNING)
+                        log.warning("duplict path: %s" % p)
                         continue
 
                     # check if already a git repos.
                     elif os.path.exists(os.path.join(p, '.git')):
                         if not os.access(os.path.join(p, '.git'), os.R_OK) or \
                            os.path.exists(os.path.join(p, '.git', 'objects')):
-                            verbose("%s looks like a repository, and will add as submodule" % p, LOG_WARNING)
+                            log.warning("%s looks like a repository, and will add as submodule" % p)
 
                     # check if p is parent of self.root
                     elif self.root.startswith(os.path.join(p,"")) or self.root == p:
-                        verbose("Not store root's parent dir: %s" % p, LOG_WARNING)
+                        log.warning("Not store root's parent dir: %s" % p)
                         continue
 
                     # check if p is child of self.root
                     elif p.startswith(os.path.join(self.root,"")):
                         if p != os.path.join(self.root, GISTORE_CONFIG_DIR):
-                            verbose("Not store root's subdir: %s" % p, LOG_WARNING)
+                            log.warning("Not store root's subdir: %s" % p)
                             continue
 
                     targets.append(p)
 
                 else:
-                    verbose("%s not exists." % p, LOG_WARNING)
+                    log.warning("%s not exists." % p)
 
             return targets
 
@@ -362,14 +376,14 @@ class Gistore(object):
                 if not os.path.exists(target):
                     os.mknod(target, 0644)
             else:
-                verbose("Unknown file type: %s." % p, LOG_ERR)
+                log.error("Unknown file type: %s." % p)
                 continue
 
             if self.is_mount(p, target):
-                verbose("%s is already mounted." % target, LOG_WARNING)
+                log.warning("%s is already mounted." % target)
             else:
                 args = self.cmd_mount + [p, target]
-                verbose (" ".join(args), LOG_DEBUG)
+                log.debug(" ".join(args))
                 proc_mnt = Popen( self.cmd_mount + [p, target], stdout=PIPE, stderr=STDOUT, close_fds=True )
                 exception_if_error(proc_mnt, args)
 
@@ -403,12 +417,12 @@ class Gistore(object):
 
         for target, src in sorted( mount_list, reverse=True ):
             args = self.cmd_umount + [ target ]
-            verbose (" ".join(args), LOG_DEBUG)
+            log.debug(" ".join(args))
             proc_umnt = Popen( args, stdout=PIPE, stderr=STDOUT, close_fds=True )
             warn_if_error(proc_umnt, args)
             if proc_umnt.returncode != 0:
                 args = self.cmd_umount_force + [ target ]
-                verbose (" ".join(args), LOG_DEBUG)
+                log.debug(" ".join(args))
                 proc_umnt = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True )
                 line = proc_umnt.stdout.readline().rstrip()
                 proc_umnt.wait()
@@ -418,7 +432,7 @@ class Gistore(object):
                     raise CommandError("Last command: %s\n\tgenerate ERRORS with returncode %d!" % (" ".join(args), proc_umnt.returncode))
 
         for target, src in sorted( mount_list, reverse=True ):
-            verbose ("remove %s" % target, LOG_DEBUG)
+            log.debug("remove %s" % target)
             if not self.is_mount(src, target) and target.startswith( mount_root ) and target != mount_root :
                 if os.path.isdir(target):
                     self.removedirs(target)

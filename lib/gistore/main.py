@@ -64,6 +64,7 @@ import os
 import sys
 import getopt
 import signal
+import logging
 
 if __name__ == '__main__':
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -74,8 +75,35 @@ from gistore.errors import *
 from gistore.api    import Gistore
 from gistore.versions import *
 
+log = logging.getLogger('gist.main')
+
+def get_log_level( level ):
+    try:
+        level = int( level )
+    except ValueError:
+        level = logging._levelNames.get ( level.upper(), logging.DEBUG )
+
+    if level < 9:
+        if level >= 5:
+            level = logging.DEBUG
+        elif level >= 4:
+            level = logging.INFO
+        elif level >= 3:
+            level = logging.WARNING
+        elif level >= 2:
+            level = logging.ERROR
+        elif level <= 1:
+            level = logging.CRITICAL
+
+    # level is number and >= 10
+    elif not logging._levelNames.has_key( level ):
+        level = logging.DEBUG
+
+    return level
+
+
 class GistoreCmd(object):
-    opt_verbose = LOG_WARNING
+    opt_verbose = 3
     opt_message = None
 
     gistobj = None
@@ -89,7 +117,7 @@ class GistoreCmd(object):
                 GistoreCmd.gistobj = Gistore(repos)
                 GistoreCmd.gistobj.mount()
             except GistoreLockError, e:
-                show_exception(e)
+                logging.critical( get_exception(e) )
                 continue
 
     @staticmethod
@@ -97,8 +125,18 @@ class GistoreCmd(object):
         if not args:
             args = [None]
         for repos in args:
-            GistoreCmd.gistobj = Gistore(repos, True)
-            GistoreCmd.gistobj.init()
+            try:
+                GistoreCmd.gistobj = Gistore(repos, True)
+                GistoreCmd.gistobj.init()
+            except GistoreLockError, e:
+                logging.critical( get_exception(e) )
+                continue
+            except Exception, e:
+                logging.critical( get_exception(e) )
+                # remove lock files...
+                GistoreCmd.gistobj.cleanup()
+                continue
+
 
     @staticmethod
     def do_list(args=[]):
@@ -114,14 +152,20 @@ class GistoreCmd(object):
         else:
             GistoreCmd.do_status(args)
 
+
     @staticmethod
     def do_status(args=[]):
         if not args:
             args = [None]
         for repos in args:
-            GistoreCmd.gistobj = Gistore(repos)
-            GistoreCmd.gistobj.status()
-            GistoreCmd.gistobj.post_check()
+            try:
+                GistoreCmd.gistobj = Gistore(repos)
+                GistoreCmd.gistobj.status()
+                GistoreCmd.gistobj.post_check()
+            except Exception, e:
+                logging.critical( get_exception(e) )
+                continue
+
 
     @staticmethod
     def do_umount(args=[]):
@@ -132,7 +176,11 @@ class GistoreCmd(object):
                 GistoreCmd.gistobj = Gistore(repos)
                 GistoreCmd.gistobj.umount()
             except GistoreLockError, e:
-                show_exception(e)
+                logging.critical( get_exception(e) )
+                continue
+            except Exception, e:
+                logging.critical( get_exception(e) )
+                GistoreCmd.gistobj.cleanup()
                 continue
 
 
@@ -161,14 +209,20 @@ class GistoreCmd(object):
                 GistoreCmd.gistobj.umount()
                 GistoreCmd.gistobj.post_check()
             except GistoreLockError, e:
-                show_exception(e)
+                logging.critical( get_exception(e) )
                 continue
+            except Exception, e:
+                logging.critical( get_exception(e) )
+                # remove lock files...
+                GistoreCmd.gistobj.cleanup()
+                continue
+
 
     @staticmethod
     def sigint_handler(signum, frame):
         """Do umount and others cleanups if receive SIGINT.
         """
-        verbose("Catch SIGINT...", LOG_DEBUG)
+        log.critical("Catch SIGINT. Cleanup then exit...")
         GistoreCmd.cleanup()
         signal.signal(signal.SIGINT, signal.default_int_handler)
         sys.exit(1)
@@ -176,10 +230,10 @@ class GistoreCmd(object):
     @staticmethod
     def cleanup():
         if GistoreCmd.gistobj is not None:
-            verbose("Doing cleanups...", LOG_NOTICE)
+            log.info("Doing cleanups...")
             GistoreCmd.gistobj.cleanup()
         else:
-            verbose("Not doing cleanups...", LOG_DEBUG)
+            log.debug("Not doing cleanups...")
 
     @staticmethod
     def usage(code, msg=''):
@@ -206,13 +260,13 @@ class GistoreCmd(object):
             if opt in ('-h', '--help'):
                 return GistoreCmd.usage(0)
             elif opt in ('-v', '--verbose'):
-                if GistoreCmd.opt_verbose < LOG_NOTICE:
-                    GistoreCmd.opt_verbose = LOG_NOTICE
+                if GistoreCmd.opt_verbose >= 5:
+                    GistoreCmd.opt_verbose = 5
                 else:
                     GistoreCmd.opt_verbose += 1
             elif opt in ('-q', '--quiet'):
-                if GistoreCmd.opt_verbose > LOG_ERR:
-                    GistoreCmd.opt_verbose = LOG_ERR
+                if GistoreCmd.opt_verbose <= 0:
+                    GistoreCmd.opt_verbose = 0
                 else:
                     GistoreCmd.opt_verbose -= 1
             elif opt in ('-m'):
@@ -220,6 +274,7 @@ class GistoreCmd(object):
 
         if GistoreCmd.opt_verbose is not None:
             cfg.log_level = GistoreCmd.opt_verbose
+        cfg.log_level = get_log_level(cfg.log_level)
 
         return args
 
@@ -250,6 +305,11 @@ class GistoreCmd(object):
         # Parse command options, and args is command params.
         args = GistoreCmd.parse_options(args[1:])
 
+        # Set logging basic config, to stderr
+        logging.basicConfig( level=cfg.log_level,
+                format='%(asctime)s %(levelname)-8s %(message)s',
+                datefmt='%m-%d %T')
+
         try:
             # Override SIGINT handler, do umount and other cleanups...
             signal.signal(signal.SIGINT,  GistoreCmd.sigint_handler)
@@ -265,9 +325,10 @@ class GistoreCmd(object):
             else:
                 return GistoreCmd.usage(1, "Unknown command: %s" % command)
         except GistoreLockError, e:
+            logging.critical( str(e) )
             raise e
         except Exception, e:
-            show_exception(e)
+            logging.critical( get_exception(e) )
             GistoreCmd.sigint_handler
 
 def main(argv=None):

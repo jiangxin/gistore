@@ -16,13 +16,7 @@
 
 import sys
 import os
-
-LOG_DEBUG=5
-LOG_INFO=4
-LOG_NOTICE=3
-LOG_WARNING=2
-LOG_ERR=1
-LOG_NONE=0
+import logging
 
 GISTORE_CONFIG_DIR  = ".gistore"
 GISTORE_LOG_DIR     = "logs"
@@ -32,7 +26,7 @@ class DefaultConfig(object):
     sys_config_dir = os.environ.get('GISTORE_ETC') or '/etc/gistore'
     backend = "git"
     root_only = False
-    log_level = LOG_WARNING
+    log_level = logging.WARNING
     task = None
     store_list = {'default': None }
 

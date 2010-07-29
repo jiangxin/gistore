@@ -17,10 +17,13 @@
 import os
 import re
 import subprocess
+import logging
 
 from gistore.scm.abstract import AbstractSCM
 from gistore.utils import *
 from gistore.config import *
+
+log = logging.getLogger('gist.git')
 
 class SCM(AbstractSCM):
 
@@ -42,7 +45,7 @@ class SCM(AbstractSCM):
 
     def init(self):
         if self.is_repos():
-            verbose("Repos %s already exists." % self.root, LOG_WARNING)
+            log.warning("Repos %s already exists." % self.root)
             return False
 
         work_tree = os.path.join(self.root, self.WORK_TREE)
@@ -72,11 +75,11 @@ class SCM(AbstractSCM):
                    ]
 
         for args in commands:
-            verbose(" ".join(args), LOG_DEBUG)
+            log.debug(" ".join(args))
             proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc, args)
 
-        verbose("create .gitignore", LOG_DEBUG)
+        log.debug("create .gitignore")
         fp = open(os.path.join(self.root, self.WORK_TREE, ".gitignore"), "w")
         fp.write(".gistore-*\n")
         fp.close()
@@ -142,7 +145,7 @@ class SCM(AbstractSCM):
                    ]
 
         for args in commands:
-            verbose(" ".join(args), LOG_DEBUG)
+            log.debug(" ".join(args))
             proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc, args)
 
@@ -183,13 +186,13 @@ class SCM(AbstractSCM):
         self._abort_if_not_repos()
 
         args = self.command + [ "add", "." ]
-        verbose(" ".join(args), LOG_DEBUG)
+        log.debug(" ".join(args))
         proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         exception_if_error(proc_add, args)
 
         if True:
             args = self.command + [ "ls-files", "--deleted" ]
-            verbose(" ".join(args), LOG_DEBUG)
+            log.debug(" ".join(args))
             proc_ls = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             deleted_files = []
             for file in proc_ls.stdout.readlines():
@@ -210,14 +213,14 @@ class SCM(AbstractSCM):
                             warn_if_error(proc_rm, args)
 
         args = self.command + [ "status", "--porcelain" ]
-        verbose(" ".join(args), LOG_DEBUG)
+        log.debug(" ".join(args))
         proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         commit_stat = []
         for line in proc_st.stdout.readlines():
             # strip last CRLF
             commit_stat.append( line.rstrip() )
        
-        msgfile = os.path.join( self.root, GISTORE_LOG_DIR, "_gistore-commit-log" )
+        msgfile = os.path.join( self.root, GISTORE_LOG_DIR, "COMMIT_MSG" )
         fp = open( msgfile, "w" )
         if message:
             fp.write( message + "\n\n" )
@@ -230,7 +233,7 @@ class SCM(AbstractSCM):
         os.putenv("GIT_COMMITTER_EMAIL", username+"@"+socket.gethostname())
 
         args = self.command + [ "commit", "--quiet", "-F", msgfile ]
-        verbose(" ".join(args), LOG_DEBUG)
+        log.debug(" ".join(args))
         proc_ci = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         # If nothing to commit, git commit return 1.
         exception_if_error2(proc_ci, args, test=lambda n: n.startswith("nothing to commit"))
@@ -251,8 +254,8 @@ class SCM(AbstractSCM):
             if m:
                 submodules.append(m.group(1))
         if submodules:
-            verbose("Not backup submodules:"+"\n    "+" ".join(submodules), LOG_ERR, False)
-            verbose("    " + "* Remove submodules using command: git rm --cached sub/module", LOG_ERR, False)
+            log.error("Not backup submodules:"+"\n    "+" ".join(submodules))
+            log.error("    " + "* Remove submodules using command: git rm --cached sub/module")
         proc.wait()
 
 
