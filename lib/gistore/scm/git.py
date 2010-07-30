@@ -324,7 +324,8 @@ class SCM(AbstractSCM):
         fp.write( commit_summary( commit_stat ) )
         fp.close()
 
-        username = os.getlogin() or "gistore"
+        import pwd
+        username = pwd.getpwuid(os.getuid())[0] or "gistore"
         import socket
         os.putenv("GIT_COMMITTER_NAME", username)
         os.putenv("GIT_COMMITTER_EMAIL", username+"@"+socket.gethostname())

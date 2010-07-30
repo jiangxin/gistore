@@ -1,4 +1,4 @@
-gistore (0.2.2) unstable; urgency=low
+gistore (0.2.2.1) unstable; urgency=low
 
   * Backup rotate support. Default backup 200 commits * 5 copies.
 
