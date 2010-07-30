@@ -334,7 +334,7 @@ class SCM(AbstractSCM):
         log.debug(" ".join(args))
         proc_ci = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         # If nothing to commit, git commit return 1.
-        exception_if_error2(proc_ci, args, test=lambda n: n.startswith("nothing to commit"))
+        exception_if_error2( proc_ci, args, test=lambda n: n.startswith("nothing to commit") or n.startswith("no changes added to commit") )
 
     def post_check(self):
         submodules = []
