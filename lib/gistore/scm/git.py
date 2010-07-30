@@ -18,6 +18,7 @@ import os
 import re
 import subprocess
 import logging
+import socket
 
 from gistore.scm.abstract import AbstractSCM
 from gistore.utils import *
@@ -29,6 +30,11 @@ class SCM(AbstractSCM):
 
     GIT_DIR     = "repo.git"
     WORK_TREE   = "run-time"
+
+    def __init__(self, root="", backup_history=0, backup_copies=0):
+        super(SCM, self).__init__(root, backup_history, backup_copies)
+        os.putenv("GIT_COMMITTER_NAME", self.username)
+        os.putenv("GIT_COMMITTER_EMAIL", self.username+"@"+socket.gethostname())
 
     def get_command(self, git_dir=True, work_tree=True):
         args = [ "git" ]
@@ -323,12 +329,6 @@ class SCM(AbstractSCM):
             fp.write( message + "\n\n" )
         fp.write( commit_summary( commit_stat ) )
         fp.close()
-
-        import pwd
-        username = pwd.getpwuid(os.getuid())[0] or "gistore"
-        import socket
-        os.putenv("GIT_COMMITTER_NAME", username)
-        os.putenv("GIT_COMMITTER_EMAIL", username+"@"+socket.gethostname())
 
         args = self.command + [ "commit", "--quiet", "-F", msgfile ]
         log.debug(" ".join(args))

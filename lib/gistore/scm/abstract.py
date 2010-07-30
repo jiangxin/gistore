@@ -15,6 +15,7 @@
 #
 
 import os
+import pwd
 from gistore.errors import *
 
 class AbstractSCM(object):
@@ -25,6 +26,7 @@ class AbstractSCM(object):
         self.set_root(root)
         self.backup_history = backup_history
         self.backup_copies  = backup_copies
+        self.username = pwd.getpwuid(os.getuid())[0] or "gistore"
 
     def set_root(self, root=""):
         if not root:
