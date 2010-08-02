@@ -69,18 +69,18 @@ class SCM(AbstractSCM):
                     self.command + [ "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
 
                     # tag the empty commit as gistore/0, never delete it.
-                    self.command + [ "tag", "gistore/0" ],
+                    self.get_command(work_tree=False) + [ "tag", "gistore/0" ],
 
                     # set local git config, which not affect by global config
-                    self.command + [ "config", "core.autocrlf", "false" ],
-                    self.command + [ "config", "core.safecrlf", "false" ],
-                    self.command + [ "config", "core.symlinks", "true" ],
-                    self.command + [ "config", "core.trustctime", "false" ],
-                    self.command + [ "config", "core.sharedRepository", "group" ],
+                    self.get_command(work_tree=False) + [ "config", "core.autocrlf", "false" ],
+                    self.get_command(work_tree=False) + [ "config", "core.safecrlf", "false" ],
+                    self.get_command(work_tree=False) + [ "config", "core.symlinks", "true" ],
+                    self.get_command(work_tree=False) + [ "config", "core.trustctime", "false" ],
+                    self.get_command(work_tree=False) + [ "config", "core.sharedRepository", "group" ],
 
                     # in case of merge, use ours instead.
-                    self.command + [ "config", "merge.ours.name", "\"always keep ours\" merge driver" ],
-                    self.command + [ "config", "merge.ours.driver", "touch %A" ],
+                    self.get_command(work_tree=False) + [ "config", "merge.ours.name", "\"always keep ours\" merge driver" ],
+                    self.get_command(work_tree=False) + [ "config", "merge.ours.driver", "touch %A" ],
                    ]
 
         for args in commands:
@@ -110,7 +110,7 @@ class SCM(AbstractSCM):
             os.makedirs(work_tree)
 
         commands = []
-        args = self.command + [ "show-ref" ]
+        args = self.get_command(work_tree=False) + [ "show-ref" ]
         returncode = subprocess.call( args=args, stdout=sys.stderr, close_fds=True )
         # repo.git has no commit yet
         if returncode != 0:
@@ -119,38 +119,38 @@ class SCM(AbstractSCM):
                           self.command + [ "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
 
                           # tag the empty commit as gistore/0, never delete it.
-                          self.command + [ "tag", "gistore/0" ],
+                          self.get_command(work_tree=False) + [ "tag", "gistore/0" ],
                          ]
         else:
             commands += [
                           # switch to a unexist ref
-                          self.command + [ "symbolic-ref", "HEAD", "refs/tags/gistore/0" ],
+                          self.get_command(work_tree=False) + [ "symbolic-ref", "HEAD", "refs/tags/gistore/0" ],
 
                           # remove cached index
-                          self.command + [ "rm", "--cached", "-r", "-f", "." ],
+                          self.get_command(work_tree=False) + [ "rm", "--cached", "-r", "-f", "-q", "." ],
 
                           # a empty commit is used as root commit of rotate backup
                           self.command + [ "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
 
                           # switch to master
-                          self.command + [ "symbolic-ref", "HEAD", "refs/heads/master" ],
+                          self.get_command(work_tree=False) + [ "symbolic-ref", "HEAD", "refs/heads/master" ],
                           self.command + [ "reset", "HEAD" ],
                          ]
 
         commands +=[ 
                     # set as bare repos
-                    self.command + [ "config", "core.bare", "true" ],
+                    self.get_command(work_tree=False) + [ "config", "core.bare", "true" ],
 
                     # set local git config, which not affect by global config
-                    self.command + [ "config", "core.autocrlf", "false" ],
-                    self.command + [ "config", "core.safecrlf", "false" ],
-                    self.command + [ "config", "core.symlinks", "true" ],
-                    self.command + [ "config", "core.trustctime", "false" ],
-                    self.command + [ "config", "core.sharedRepository", "group" ],
+                    self.get_command(work_tree=False) + [ "config", "core.autocrlf", "false" ],
+                    self.get_command(work_tree=False) + [ "config", "core.safecrlf", "false" ],
+                    self.get_command(work_tree=False) + [ "config", "core.symlinks", "true" ],
+                    self.get_command(work_tree=False) + [ "config", "core.trustctime", "false" ],
+                    self.get_command(work_tree=False) + [ "config", "core.sharedRepository", "group" ],
 
                     # in case of merge, use ours instead.
-                    self.command + [ "config", "merge.ours.name", "\"always keep ours\" merge driver" ],
-                    self.command + [ "config", "merge.ours.driver", "touch %A" ],
+                    self.get_command(work_tree=False) + [ "config", "merge.ours.name", "\"always keep ours\" merge driver" ],
+                    self.get_command(work_tree=False) + [ "config", "merge.ours.driver", "touch %A" ],
                    ]
 
         for args in commands:
@@ -252,6 +252,8 @@ class SCM(AbstractSCM):
 
 
     def commit(self, message=None):
+
+        # generate user friendly commit log
         def commit_summary( commit_st ):
             sample = 5
             status = {}
@@ -283,6 +285,58 @@ class SCM(AbstractSCM):
 
             return "\n".join(buffer)
 
+
+        # add submodule as normal directory
+        def add_submodule(submodule, status=[]):
+            # delete submodule in cache
+            args = self.get_command(work_tree=False) + [ "rm", "--cached", submodule ]
+            log.debug(" ".join(args))
+            proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            exception_if_error(proc_rm, args)
+
+            # add tmp file in submodule
+            open( os.path.join( self.root, self.WORK_TREE, submodule, '.gistore-submodule'), 'w' ).close()
+
+            # git add tmp file in submodule
+            args = self.command + [ "add", "-f", os.path.join( submodule, '.gistore-submodule' ) ]
+            log.debug(" ".join(args))
+            proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            exception_if_error(proc_add, args)
+
+            # git add whole submodule dir
+            args = self.command + [ "add", submodule ]
+            log.debug(" ".join(args))
+            proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            exception_if_error(proc_add, args)
+
+            # git rm -f tmp file in submodule
+            args = self.get_command(work_tree=False) + [ "rm", "--cached", os.path.join( submodule, '.gistore-submodule' ) ]
+            log.debug(" ".join(args))
+            proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            exception_if_error(proc_rm, args)
+
+            # check status --porcelain and append to status[]
+            args = self.command + [ "status", "--porcelain", submodule ]
+            log.debug(" ".join(args))
+            proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            sub_modules = []
+            for line in proc_st.stdout.readlines():
+                # strip last CRLF
+                line = line.rstrip()
+                if line.startswith("AM "):
+                    log.info( "submodule in schedule: %s" % line )
+                    sub_modules.append( line.split( None, 1 )[1] )
+                else:
+                    status.append( line )
+
+            # if another submodule in it, call add_submodule again.
+            for submod in sub_modules:
+                add_submodule( submod, status )
+
+            return status
+
+
+        ##
         self._abort_if_not_repos()
 
         # Check if backup needs rotate
@@ -293,6 +347,7 @@ class SCM(AbstractSCM):
         proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         exception_if_error(proc_add, args)
 
+        # delete files but keep directories.
         if True:
             args = self.command + [ "ls-files", "--deleted" ]
             log.debug(" ".join(args))
@@ -305,13 +360,13 @@ class SCM(AbstractSCM):
             if deleted_files:
                 try:
                     # `git rm --cached` will not remote blank-dir.
-                    args = self.command + [ "rm", "--cached", "--quiet" ] + deleted_files
+                    args = self.get_command(work_tree=False) + [ "rm", "--cached", "--quiet" ] + deleted_files
                     proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
                     warn_if_error(proc_rm, args)
                 except OSError, e:
                     if "Argument list too long" in e:
                         for file in deleted_files:
-                            args = self.command + [ "rm", "--cached", "--quiet", file ]
+                            args = self.get_command(work_tree=False) + [ "rm", "--cached", "--quiet", file ]
                             proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
                             warn_if_error(proc_rm, args)
 
@@ -319,10 +374,19 @@ class SCM(AbstractSCM):
         log.debug(" ".join(args))
         proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         commit_stat = []
+        sub_modules = []
         for line in proc_st.stdout.readlines():
             # strip last CRLF
-            commit_stat.append( line.rstrip() )
-       
+            line = line.rstrip()
+            if line.startswith("AM "):
+                log.info( "submodule in schedule: %s" % line )
+                sub_modules.append( line.split( None, 1 )[1] )
+            else:
+                commit_stat.append( line )
+
+        for submod in sub_modules:
+            commit_stat.extend( add_submodule(submod) )
+
         msgfile = os.path.join( self.root, GISTORE_LOG_DIR, "COMMIT_MSG" )
         fp = open( msgfile, "w" )
         if message:
