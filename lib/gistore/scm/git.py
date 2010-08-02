@@ -288,11 +288,7 @@ class SCM(AbstractSCM):
 
         # add submodule as normal directory
         def add_submodule(submodule, status=[]):
-            # delete submodule in cache
-            args = self.get_command(work_tree=False) + [ "rm", "--cached", submodule ]
-            log.debug(" ".join(args))
-            proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-            exception_if_error(proc_rm, args)
+            # submodule already deleted in cache
 
             # add tmp file in submodule
             open( os.path.join( self.root, self.WORK_TREE, submodule, '.gistore-submodule'), 'w' ).close()
@@ -310,7 +306,7 @@ class SCM(AbstractSCM):
             exception_if_error(proc_add, args)
 
             # git rm -f tmp file in submodule
-            args = self.get_command(work_tree=False) + [ "rm", "--cached", os.path.join( submodule, '.gistore-submodule' ) ]
+            args = self.command + [ "rm", "-f", os.path.join( submodule, '.gistore-submodule' ) ]
             log.debug(" ".join(args))
             proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc_rm, args)
@@ -319,19 +315,13 @@ class SCM(AbstractSCM):
             args = self.command + [ "status", "--porcelain", submodule ]
             log.debug(" ".join(args))
             proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-            sub_modules = []
             for line in proc_st.stdout.readlines():
                 # strip last CRLF
                 line = line.rstrip()
                 if line.startswith("AM "):
                     log.info( "submodule in schedule: %s" % line )
-                    sub_modules.append( line.split( None, 1 )[1] )
                 else:
                     status.append( line )
-
-            # if another submodule in it, call add_submodule again.
-            for submod in sub_modules:
-                add_submodule( submod, status )
 
             return status
 
@@ -374,18 +364,21 @@ class SCM(AbstractSCM):
         log.debug(" ".join(args))
         proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         commit_stat = []
-        sub_modules = []
         for line in proc_st.stdout.readlines():
             # strip last CRLF
             line = line.rstrip()
+            # status line begin with "AM" means: add with modification, must be a changed submodule.
             if line.startswith("AM "):
                 log.info( "submodule in schedule: %s" % line )
-                sub_modules.append( line.split( None, 1 )[1] )
             else:
                 commit_stat.append( line )
 
-        for submod in sub_modules:
-            commit_stat.extend( add_submodule(submod) )
+        submodules = self.remove_submodules()
+        while submodules:
+            for submod in submodules:
+                commit_stat.extend( add_submodule(submod) )
+            # new add directories may contain other submodule.
+            submodules = self.remove_submodules()
 
         msgfile = os.path.join( self.root, GISTORE_LOG_DIR, "COMMIT_MSG" )
         fp = open( msgfile, "w" )
@@ -400,9 +393,10 @@ class SCM(AbstractSCM):
         # If nothing to commit, git commit return 1.
         exception_if_error2( proc_ci, args, test=lambda n: n.startswith("nothing to commit") or n.startswith("no changes added to commit") )
 
-    def post_check(self):
+
+    def remove_submodules(self):
         submodules = []
-        args = self.command + [ "submodule", "status", self.root]
+        args = self.get_command(work_tree=False) + [ "--work-tree=.", "submodule", "status" ]
         proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         #Read stdout buffer before wait(), because if buffer overflow, process will hang!
         pat1 = re.compile(r".\w{40} (\w*) \(.*\)?")
@@ -415,10 +409,22 @@ class SCM(AbstractSCM):
             m = pat2.match(line)
             if m:
                 submodules.append(m.group(1))
-        if submodules:
-            log.error("Not backup submodules:"+"\n    "+" ".join(submodules))
-            log.error("    " + "* Remove submodules using command: git rm --cached sub/module")
+
         proc.wait()
+
+        if submodules:
+            log.error("There are submodules in backup:"+"\n    "+" ".join(submodules))
+            args = self.get_command(work_tree=False) + [ "rm", "--cached", "-q" ] + submodules
+            log.debug(" ".join(args))
+            proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            exception_if_error(proc_rm, args)
+
+            # maybe other submodules
+            submodules.extend( self.remove_submodules() )
+            return submodules
+
+        else:
+            return []
 
 
 # vim: et ts=4 sw=4
