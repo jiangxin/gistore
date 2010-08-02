@@ -2,7 +2,7 @@
 
 from distutils.core import setup
 
-version_string = "0.2.2.1"
+version_string = "0.2.3"
 
 setup(name='gistore',
     version=version_string,
