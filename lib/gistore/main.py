@@ -211,6 +211,9 @@ class GistoreCmd(object):
             except GistoreLockError, e:
                 logging.critical( get_exception(e) )
                 continue
+            except TaskNotExistsError, e:
+                logging.critical( get_exception(e) )
+                continue
             except Exception, e:
                 logging.critical( get_exception(e) )
                 # remove lock files...
