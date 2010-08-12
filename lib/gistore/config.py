@@ -72,10 +72,12 @@ DEFAULT_BACKUPS = []
 
 ##Example: dynamic backup list
 #import subprocess
-#proc = subprocess.Popen(['python', '/opt/ossxp/bin/ossxp_pkgadmin.py', 'list_backup'], stdout=subprocess.PIPE, stderr=open('/dev/null', 'w'), close_fds=True)
-#for line in proc.stdout.readlines():
+#proc = subprocess.Popen(
+#           ['python', '/opt/ossxp/bin/ossxp_pkgadmin.py', 'list_backup'],
+#           stdout=subprocess.PIPE, stderr=open('/dev/null', 'w'),
+#           close_fds=True )
+#for line in proc.communicate()[0].splitlines():
 #    DEFAULT_BACKUPS.append(line.strip())
-#proc.wait()
 
 class Config(DefaultConfig):
     store_list = {'default': DEFAULT_BACKUPS }

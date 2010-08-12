@@ -387,7 +387,6 @@ class Gistore(object):
                 log.warning("%s is already mounted." % target)
             else:
                 args = self.cmd_mount + [p, target]
-                log.debug(" ".join(args))
                 proc_mnt = Popen( self.cmd_mount + [p, target], stdout=PIPE, stderr=STDOUT, close_fds=True )
                 exception_if_error(proc_mnt, args)
 
@@ -405,35 +404,30 @@ class Gistore(object):
     def umount(self):
         self.assert_no_lock("commit")
 
-        proc = Popen([ "mount" ], stdout=PIPE, stderr=STDOUT, close_fds=True )
+        output = Popen([ "mount" ], stdout=PIPE, stderr=STDOUT, close_fds=True ).communicate()[0]
         pattern = re.compile(r"^(.*) on (.*) type .*$")
         mount_root = os.path.realpath( os.path.join( self.root, self.scm.WORK_TREE) )
         mount_list = []
-        for line in proc.stdout.readlines():
-            line = line.rstrip()
+        for line in output.splitlines():
             m = pattern.search(line)
             if m:
                 src = m.group(1)
                 target = os.path.realpath( m.group(2) )
                 if target.startswith( mount_root ):
                     mount_list.append( (target, src, ) )
-        proc.wait()
 
         for target, src in sorted( mount_list, reverse=True ):
-            args = self.cmd_umount + [ target ]
-            log.debug(" ".join(args))
-            proc_umnt = Popen( args, stdout=PIPE, stderr=STDOUT, close_fds=True )
-            warn_if_error(proc_umnt, args)
-            if proc_umnt.returncode != 0:
+            try:
+                args = self.cmd_umount + [ target ]
+                proc_umnt = Popen( args, stdout=PIPE, stderr=STDOUT, close_fds=True )
+                exception_if_error( proc_umnt, args, lambda n: n.endswith("not mounted") )
+            except:
                 args = self.cmd_umount_force + [ target ]
-                log.debug(" ".join(args))
+                proc_umnt = Popen( args, stdout=PIPE, stderr=STDOUT, close_fds=True )
+
+                args = self.cmd_umount_force + [ target ]
                 proc_umnt = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True )
-                line = proc_umnt.stdout.readline().rstrip()
-                proc_umnt.wait()
-                if proc_umnt.returncode != 0:
-                    if line.endswith("not mounted"):
-                        continue
-                    raise CommandError("Last command: %s\n\tgenerate ERRORS with returncode %d!" % (" ".join(args), proc_umnt.returncode))
+                exception_if_error( proc_umnt, args, lambda n: n.endswith("not mounted") )
 
         for target, src in sorted( mount_list, reverse=True ):
             log.debug("remove %s" % target)

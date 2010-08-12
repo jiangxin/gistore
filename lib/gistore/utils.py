@@ -22,67 +22,55 @@ import logging
 
 log = logging.getLogger('gist.utils')
 
-def warn_if_error(proc, cmdline="", stdout=None):
+
+def warn_if_error(proc, cmdline=""):
     if isinstance(cmdline, (list,tuple)):
         cmdline = " ".join(cmdline)
-    if stdout is None:
-        stdout = proc.stdout
-    #Read stdout buffer before wait(), because if buffer overflow, process will hang!
-    buffer = stdout.read().rstrip()
-    proc.wait()
+
+    # use proc.communicate() instead of proc.wait() or read buffer before call proc.wait(),
+    # otherwize if buffer overflow, process will hang!
+    output, error_output = proc.communicate()
+    if error_output:
+        output = output and output + "\n" + error_output or error_output
+
     if proc.returncode != 0:
         log.warning("Last command: %s\n\tgenerate warnings with returncode %d." % (cmdline, proc.returncode))
-        if buffer:
-            log.warning( "Command output:\n" + buffer )
+        if output:
+            log.warning( "Command output:\n" + output )
     else:
-        if buffer:
-            log.debug("command: %s" % cmdline)
-            log.debug( "output:\n" + buffer )
+        log.debug( "command: %s" % cmdline )
+        if output:
+            log.debug( "output:\n" + output )
 
-def exception_if_error(proc, cmdline="", stdout=None):
+
+def exception_if_error(proc, cmdline="", outtest=None):
     if isinstance(cmdline, (list,tuple)):
         cmdline = " ".join(cmdline)
-    if stdout is None:
-        stdout = proc.stdout
-    #Read stdout buffer before wait(), because if buffer overflow, process will hang!
-    buffer = stdout.read().rstrip()
-    proc.wait()
-    if proc.returncode != 0:
-        msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
-        log.critical( msg )
-        if buffer:
-            log.critical( "Command output:\n" + buffer )
-        raise CommandError( msg )
-    else:
-        if buffer:
-            log.debug("Command: %s" % cmdline)
-            log.debug( "Command output:\n" + buffer )
 
-def exception_if_error2(proc, cmdline="", stdout=None, test=None):
-    if isinstance(cmdline, (list,tuple)):
-        cmdline = " ".join(cmdline)
-    if stdout is None:
-        stdout = proc.stdout
-    #Read stdout buffer before wait(), because if buffer overflow, process will hang!
+    # use proc.communicate() instead of proc.wait() or read buffer before call proc.wait(),
+    # otherwize if buffer overflow, process will hang!
+    output, error_output = proc.communicate()
+    if error_output:
+        output = output and output + "\n" + error_output or error_output
+
     success = False
-    lines = stdout.readlines()
-    for line in lines:
-        if not success and test and test(line):
-            success = True
-            log.debug("Found matched line: %s" % line.rstrip())
-
-    proc.wait()
+    if outtest is not None:
+        for line in output.splitlines():
+            if not success and outtest(line):
+                success = True
+                log.debug( "Command not failed, matched line found: %s" % line )
+                break
 
     if not success and proc.returncode != 0:
         msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
         log.critical( msg )
-        if lines:
-            log.critical( "Command output:\n" + ''.join(lines))
+        if output:
+            log.critical( "Command output:\n" + output )
         raise CommandError( msg )
     else:
-        if lines:
-            log.debug("Command: %s" % cmdline)
-            log.debug( "Command output:\n" + ''.join(lines))
+        log.debug("Command: %s" % cmdline)
+        if output:
+            log.debug( "Command output:\n" + output )
 
 
 def get_exception(e):
@@ -103,6 +91,7 @@ def exception_to_unicode(e, traceback=""):
         traceback_only = tb.getvalue().split('\n')[:-2]
         message = '\n%s\n%s' % (to_unicode('\n'.join(traceback_only)), message)
     return message
+
 
 def to_unicode(text, charset=None):
     """Convert a `str` object to an `unicode` object.
@@ -138,5 +127,6 @@ def to_unicode(text, charset=None):
             return unicode(text, 'utf-8')
         except UnicodeError:
             return unicode(text, locale.getpreferredencoding(), 'replace')
+
 
 # vim: et ts=4 sw=4

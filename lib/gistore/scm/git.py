@@ -84,7 +84,6 @@ class SCM(AbstractSCM):
                    ]
 
         for args in commands:
-            log.debug(" ".join(args))
             proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc, args)
 
@@ -154,7 +153,6 @@ class SCM(AbstractSCM):
                    ]
 
         for args in commands:
-            log.debug(" ".join(args))
             proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc, args)
 
@@ -163,8 +161,7 @@ class SCM(AbstractSCM):
         args = self.get_command(work_tree=False) + [ "rev-list", "master" ]
         log.debug(" ".join(args))
         proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=None, close_fds=True)
-        lines = proc.stdout.readlines()
-        proc.wait()
+        lines = proc.communicate()[0].splitlines()
         if proc.returncode != 0:
             msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
             log.critical( msg )
@@ -194,8 +191,7 @@ class SCM(AbstractSCM):
         # list tags
         args = self.get_command(work_tree=False) + [ "tag" ]
         proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=None, close_fds=True)
-        lines = sorted(proc.stdout.readlines())
-        proc.wait()
+        lines = sorted( proc.communicate()[0].splitlines() )
         if proc.returncode != 0:
             msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
             log.critical( msg )
@@ -248,7 +244,7 @@ class SCM(AbstractSCM):
         command_list.append(cmd)
 
         for i in range(len(command_list)):
-            log.debug( "Backup rotate step %d: %s" % (i, ' '.join(command_list[i])) )
+            log.debug( "Backup rotate step %d" % i )
             proc = subprocess.Popen(command_list[i], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc, command_list[i])
 
@@ -297,19 +293,16 @@ class SCM(AbstractSCM):
 
             # git add tmp file in submodule
             args = self.command + [ "add", "-f", os.path.join( submodule, '.gistore-submodule' ) ]
-            log.debug(" ".join(args))
             proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc_add, args)
 
             # git add whole submodule dir
             args = self.command + [ "add", submodule ]
-            log.debug(" ".join(args))
             proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc_add, args)
 
             # git rm -f tmp file in submodule
             args = self.command + [ "rm", "-f", os.path.join( submodule, '.gistore-submodule' ) ]
-            log.debug(" ".join(args))
             proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc_rm, args)
 
@@ -317,8 +310,7 @@ class SCM(AbstractSCM):
             args = self.command + [ "status", "--porcelain", submodule ]
             log.debug(" ".join(args))
             proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-            status.extend( [ line.rstrip() for line in proc_st.stdout.readlines() ] )
-            proc_st.wait()
+            status.extend( [ line for line in proc_st.communicate()[0].splitlines() ] )
             return status
 
 
@@ -329,7 +321,6 @@ class SCM(AbstractSCM):
         self.backup_rotate()
 
         args = self.command + [ "add", "." ]
-        log.debug(" ".join(args))
         proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         exception_if_error(proc_add, args)
 
@@ -339,9 +330,7 @@ class SCM(AbstractSCM):
             log.debug(" ".join(args))
             proc_ls = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             deleted_files = []
-            for file in proc_ls.stdout.readlines():
-                # strip last CRLF
-                file = file.rstrip()
+            for file in proc_ls.communicate()[0].splitlines():
                 deleted_files.append(file)
             if deleted_files:
                 try:
@@ -359,8 +348,7 @@ class SCM(AbstractSCM):
         args = self.command + [ "status", "--porcelain" ]
         log.debug(" ".join(args))
         proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-        commit_stat = [ line.rstrip() for line in proc_st.stdout.readlines() ]
-        proc_st.wait()
+        commit_stat = [ line for line in proc_st.communicate()[0].splitlines() ]
 
         submodules = self.remove_submodules()
         while submodules:
@@ -385,20 +373,18 @@ class SCM(AbstractSCM):
         fp.close()
 
         args = self.command + [ "commit", "--quiet", "-F", msgfile ]
-        log.debug(" ".join(args))
         proc_ci = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         # If nothing to commit, git commit return 1.
-        exception_if_error2( proc_ci, args, test=lambda n: n.startswith("nothing to commit") or n.startswith("no changes added to commit") )
+        exception_if_error( proc_ci, args, lambda n: n.startswith("nothing to commit") or n.startswith("no changes added to commit") )
 
 
     def remove_submodules(self):
         submodules = []
         args = self.get_command(work_tree=False) + [ "--work-tree=.", "submodule", "status" ]
         proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-        #Read stdout buffer before wait(), because if buffer overflow, process will hang!
         pat1 = re.compile(r".\w{40} (\w*) \(.*\)?")
         pat2 = re.compile(r"No submodule mapping found in .gitmodules for path '(.*)'")
-        for line in proc.stdout.readlines():
+        for line in proc.communicate()[0].splitlines():
             line = line.strip()
             m = pat1.match(line)
             if m:
@@ -407,12 +393,9 @@ class SCM(AbstractSCM):
             if m:
                 submodules.append(m.group(1))
 
-        proc.wait()
-
         if submodules:
             log.warning("Remove submodules in backup:"+"\n    "+" ".join(submodules))
             args = self.get_command(work_tree=False) + [ "rm", "--cached", "-q" ] + submodules
-            log.debug(" ".join(args))
             proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc_rm, args)
 

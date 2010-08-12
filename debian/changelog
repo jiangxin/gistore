@@ -1,7 +1,8 @@
-gistore (0.2.4) unstable; urgency=low
+gistore (0.2.4-2) unstable; urgency=low
 
   * Not stop all if one task does not exist.
   * Log commit message with info loglevel.
+  * Replace Popen.wait() to Popen.communicate().
 
  -- Jiang Xin <worldhello.net@gmail.com>  Thu, 12 Aug 2010 15:28:35 +0800
 
