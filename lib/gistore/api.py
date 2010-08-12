@@ -259,12 +259,6 @@ class Gistore(object):
                         log.warning("duplict path: %s" % p)
                         continue
 
-                    # check if already a git repos.
-                    elif os.path.exists(os.path.join(p, '.git')):
-                        if not os.access(os.path.join(p, '.git'), os.R_OK) or \
-                           os.path.exists(os.path.join(p, '.git', 'objects')):
-                            log.warning("%s looks like a repository, and will add as submodule" % p)
-
                     # check if p is parent of self.root
                     elif self.root.startswith(os.path.join(p,"")) or self.root == p:
                         log.warning("Not store root's parent dir: %s" % p)
