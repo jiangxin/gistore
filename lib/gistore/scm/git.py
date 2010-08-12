@@ -173,7 +173,9 @@ class SCM(AbstractSCM):
             raise CommandError( msg )
 
         log.debug( "Total %d commits in master." % len(lines) )
-        return len(lines)
+
+        # the very first commit is a blank commit, nothing in it.
+        return len(lines) - 1
 
 
     def backup_rotate(self):
@@ -184,11 +186,11 @@ class SCM(AbstractSCM):
 
         count = self._get_commit_count()
         # the first commit is a blank commit
-        if count < self.backup_history + 1:
-            log.debug( "No backup rotate needed. %d < %d." % (count-1, self.backup_history) )
+        if count < self.backup_history:
+            log.debug( "No backup rotate needed. %d < %d." % (count, self.backup_history) )
             return
 
-        log.info( "Begin backup rotate, for %d >= %d." % (count-1, self.backup_history) )
+        log.info( "Begin backup rotate, for %d >= %d." % (count, self.backup_history) )
         # list tags
         args = self.get_command(work_tree=False) + [ "tag" ]
         proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=None, close_fds=True)
@@ -315,14 +317,8 @@ class SCM(AbstractSCM):
             args = self.command + [ "status", "--porcelain", submodule ]
             log.debug(" ".join(args))
             proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-            for line in proc_st.stdout.readlines():
-                # strip last CRLF
-                line = line.rstrip()
-                if line.startswith("AM "):
-                    log.info( "submodule in schedule: %s" % line )
-                else:
-                    status.append( line )
-
+            status.extend( [ line.rstrip() for line in proc_st.stdout.readlines() ] )
+            proc_st.wait()
             return status
 
 
@@ -363,28 +359,29 @@ class SCM(AbstractSCM):
         args = self.command + [ "status", "--porcelain" ]
         log.debug(" ".join(args))
         proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-        commit_stat = []
-        for line in proc_st.stdout.readlines():
-            # strip last CRLF
-            line = line.rstrip()
-            # status line begin with "AM" means: add with modification, must be a changed submodule.
-            if line.startswith("AM "):
-                log.info( "submodule in schedule: %s" % line )
-            else:
-                commit_stat.append( line )
+        commit_stat = [ line.rstrip() for line in proc_st.stdout.readlines() ]
+        proc_st.wait()
 
         submodules = self.remove_submodules()
         while submodules:
+            log.info( "Re-add submodules: %s", ', '.join(submodules) )
             for submod in submodules:
                 commit_stat.extend( add_submodule(submod) )
             # new add directories may contain other submodule.
             submodules = self.remove_submodules()
 
+        if message:
+            message += "\n\n"
+            message += commit_summary( commit_stat )
+        else:
+            message = commit_summary( commit_stat )
+
+        if commit_stat:
+            log.info( "Backup changes for %s\n%s" % (self.root, message) )
+
         msgfile = os.path.join( self.root, GISTORE_LOG_DIR, "COMMIT_MSG" )
         fp = open( msgfile, "w" )
-        if message:
-            fp.write( message + "\n\n" )
-        fp.write( commit_summary( commit_stat ) )
+        fp.write( message )
         fp.close()
 
         args = self.command + [ "commit", "--quiet", "-F", msgfile ]
@@ -413,7 +410,7 @@ class SCM(AbstractSCM):
         proc.wait()
 
         if submodules:
-            log.error("There are submodules in backup:"+"\n    "+" ".join(submodules))
+            log.warning("Remove submodules in backup:"+"\n    "+" ".join(submodules))
             args = self.get_command(work_tree=False) + [ "rm", "--cached", "-q" ] + submodules
             log.debug(" ".join(args))
             proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)

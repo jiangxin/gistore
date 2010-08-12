@@ -83,7 +83,7 @@ def get_log_level( level ):
     except ValueError:
         level = logging._levelNames.get ( level.upper(), logging.DEBUG )
 
-    if level < 9:
+    if level <= 9:
         if level >= 5:
             level = logging.DEBUG
         elif level >= 4:
@@ -103,7 +103,7 @@ def get_log_level( level ):
 
 
 class GistoreCmd(object):
-    opt_verbose = 3
+    opt_verbose = 4     # info
     opt_message = None
 
     gistobj = None
@@ -233,7 +233,7 @@ class GistoreCmd(object):
     @staticmethod
     def cleanup():
         if GistoreCmd.gistobj is not None:
-            log.info("Doing cleanups...")
+            log.warning("Doing cleanups...")
             GistoreCmd.gistobj.cleanup()
         else:
             log.debug("Not doing cleanups...")

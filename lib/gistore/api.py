@@ -261,13 +261,13 @@ class Gistore(object):
 
                     # check if p is parent of self.root
                     elif self.root.startswith(os.path.join(p,"")) or self.root == p:
-                        log.warning("Not store root's parent dir: %s" % p)
+                        log.error("Not store root's parent dir: %s" % p)
                         continue
 
                     # check if p is child of self.root
                     elif p.startswith(os.path.join(self.root,"")):
                         if p != os.path.join(self.root, GISTORE_CONFIG_DIR):
-                            log.warning("Not store root's subdir: %s" % p)
+                            log.error("Not store root's subdir: %s" % p)
                             continue
 
                     targets.append(p)
@@ -380,7 +380,7 @@ class Gistore(object):
                 if not os.path.exists(target):
                     os.mknod(target, 0644)
             else:
-                log.error("Unknown file type: %s." % p)
+                log.error("Mount failed. Unknown file type: %s." % p)
                 continue
 
             if self.is_mount(p, target):

@@ -26,7 +26,7 @@ class DefaultConfig(object):
     sys_config_dir = os.environ.get('GISTORE_ETC') or '/etc/gistore'
     backend = "git"
     root_only = False
-    log_level = logging.WARNING
+    log_level = logging.INFO
     task = None
     backup_history = 200
     backup_copies  = 5

@@ -1,8 +1,9 @@
-gistore (0.2.3.1) unstable; urgency=low
+gistore (0.2.4) unstable; urgency=low
 
   * Not stop all if one task does not exist.
+  * Log commit message with info loglevel.
 
- -- Jiang Xin <worldhello.net@gmail.com>  Thu, 05 Aug 2010 16:13:10 +0800
+ -- Jiang Xin <worldhello.net@gmail.com>  Thu, 12 Aug 2010 15:28:35 +0800
 
 gistore (0.2.3) unstable; urgency=low
 
