@@ -1,4 +1,4 @@
-gistore (0.2.4-2) unstable; urgency=low
+gistore (0.2.4-3) unstable; urgency=low
 
   * Not stop all if one task does not exist.
   * Log commit message with info loglevel.

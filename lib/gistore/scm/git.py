@@ -366,6 +366,8 @@ class SCM(AbstractSCM):
 
         if commit_stat:
             log.info( "Backup changes for %s\n%s" % (self.root, message) )
+        else:
+            log.info( "*Nothing changed*, no backup for %s\n%s" % (self.root, message) )
 
         msgfile = os.path.join( self.root, GISTORE_LOG_DIR, "COMMIT_MSG" )
         fp = open( msgfile, "w" )
