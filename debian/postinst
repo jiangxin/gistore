@@ -1,0 +1,76 @@
+#!/bin/sh -e
+
+if [ "$1" != "configure" ]; then
+        exit 0
+fi
+
+setup_gistore_user() {
+	if ! getent passwd gistore >/dev/null; then
+		adduser --quiet --system --group --shell /bin/sh gistore
+    # ossxp allow user login only if he/she belongs to ssh group
+    adduser --quiet gistore ssh || true
+	fi
+
+  if [ -d /home/gistore ] && [ ! -f /home/gistore/.gitosis.conf ]; then
+
+    cat > /home/gistore/.gitosis.conf <<EOF
+[gitosis]
+repositories = /etc/gistore/tasks
+#loglevel=DEBUG
+gitweb = yes
+daemon = no
+
+[group gistore]
+members = gistore
+# ossxp hacked gitosis can do this map properly.
+map readonly * = (.*):\1/repo
+EOF
+
+  fi
+
+  if [ -d /home/gistore ] && [ ! -f /home/gistore/.ssh/authorized_keys ]; then
+    mkdir -p /home/gistore/.ssh
+    touch /home/gistore/.ssh/authorized_keys
+    chown gistore.gistore /home/gistore/.ssh /home/gistore/.ssh/authorized_keys
+    chmod 600 /home/gistore/.ssh/authorized_keys
+  fi
+}
+
+hack_sshd_config() {
+  [ -f /etc/ssh/sshd_config ] || return
+
+  if ! grep -q "Match user gistore" /etc/ssh/sshd_config; then
+    cat >> /etc/ssh/sshd_config <<EOF
+
+# ossxp gistore backup account settings:
+Match user gistore
+    ForceCommand gitosis-serve gistore
+    X11Forwarding no
+    AllowTcpForwarding no
+    AllowAgentForwarding no
+    PubkeyAuthentication yes
+    #PasswordAuthentication no
+
+# End of file or begin another Match conditional block
+EOF
+
+    if [ -x /usr/sbin/invoke-rc.d ]; then
+      invoke-rc.d ssh restart
+    else
+      /etc/init.d/ssh restart
+    fi
+
+    echo "==================================================================="
+    echo "Upload your public key, using command: ssh-copy-id gistore@<SERVER>"
+    echo "==================================================================="
+
+  fi
+}
+
+
+if dpkg --compare-versions "$2" lt 0.2.4-5; then
+  setup_gistore_user
+  hack_sshd_config
+fi
+
+#DEBHELPER#
