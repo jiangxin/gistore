@@ -53,11 +53,8 @@ Available command:
           * commit
           * umount
 
-    mount  [task or direcotry]
-        Mount 
-
-    umount [task or direcotry]
-        Umount
+    commit-all
+        Commit changes in all backup tasks under /etc/gistore/tasks/
 '''
 
 import os
@@ -183,6 +180,9 @@ class GistoreCmd(object):
                 GistoreCmd.gistobj.cleanup()
                 continue
 
+    @staticmethod
+    def do_forbidden(args=[]):
+        raise Exception("Internal use only, not run by user.")
 
     @staticmethod
     def do_commit_all(args=[]):
@@ -292,14 +292,16 @@ class GistoreCmd(object):
 
         command = args[0].lower().replace('-','_')
         # Command aliases
-        if command in ['unmount', 'umnt', 'unmnt']:
-            command = 'umount'
-        elif command in ['mnt']:
-            command = 'mount'
+        if command in ['umount', 'unmount', 'umnt', 'unmnt']:
+            command = 'forbidden'
+        elif command in ['mount', 'mnt']:
+            command = 'forbidden'
         elif "initialized".startswith(command):
             command = 'init'
-        elif command in ["ci", "checkin"]:
+        elif command in ["ci", "backup"]:
             command = 'commit'
+        elif command in ["ci_all", "backup_all"]:
+            command = 'commit_all'
         elif "status".startswith(command):
             command = 'status'
         elif command in ["ls", "dir"]:

@@ -28,13 +28,12 @@ log = logging.getLogger('gist.git')
 
 class SCM(AbstractSCM):
 
-    GIT_DIR     = "repo.git"
-    WORK_TREE   = "run-time"
 
-    def __init__(self, root="", backup_history=0, backup_copies=0):
-        super(SCM, self).__init__(root, backup_history, backup_copies)
+    def __init__(self, root="", work_tree="run-time", backup_history=0, backup_copies=0):
+        super(SCM, self).__init__(root, work_tree, backup_history, backup_copies)
         os.putenv("GIT_COMMITTER_NAME", self.username)
         os.putenv("GIT_COMMITTER_EMAIL", self.username+"@"+socket.gethostname())
+        self.GIT_DIR     = "repo.git"
 
     def get_command(self, git_dir=True, work_tree=True):
         args = [ "git" ]
@@ -57,16 +56,12 @@ class SCM(AbstractSCM):
             log.warning("Repos %s already exists." % self.root)
             return False
 
-        work_tree = os.path.join(self.root, self.WORK_TREE)
-        if not os.path.exists(work_tree):
-            os.makedirs(work_tree)
-
         commands = [ 
                     # git init command can not work with --work-tree arguments.
                     [ "git", "init", "--bare", os.path.join(self.root, self.GIT_DIR) ],
 
                     # a empty commit is used as root commit of rotate backup
-                    self.command + [ "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
+                    self.get_command(work_tree=False) + [ "--work-tree=/tmp", "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
 
                     # tag the empty commit as gistore/0, never delete it.
                     self.get_command(work_tree=False) + [ "tag", "gistore/0" ],
@@ -87,10 +82,10 @@ class SCM(AbstractSCM):
             proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
             exception_if_error(proc, args)
 
-        log.debug("create .gitignore")
-        fp = open(os.path.join(self.root, self.WORK_TREE, ".gitignore"), "w")
-        fp.write(".gistore-*\n")
-        fp.close()
+        #log.debug("create .gitignore")
+        #fp = open(os.path.join(self.root, self.WORK_TREE, ".gitignore"), "w")
+        #fp.write(".gistore-*\n")
+        #fp.close()
 
 
     def upgrade(self, old):
@@ -104,10 +99,6 @@ class SCM(AbstractSCM):
             if os.path.exists( oldgit ):
                 os.rename( oldgit, os.path.join(self.root, self.GIT_DIR) )
 
-        work_tree = os.path.join(self.root, self.WORK_TREE)
-        if not os.path.exists(work_tree):
-            os.makedirs(work_tree)
-
         commands = []
         args = self.get_command(work_tree=False) + [ "show-ref" ]
         returncode = subprocess.call( args=args, stdout=sys.stderr, close_fds=True )
@@ -115,7 +106,7 @@ class SCM(AbstractSCM):
         if returncode != 0:
             commands += [
                           # a empty commit is used as root commit of rotate backup
-                          self.command + [ "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
+                          self.get_command(work_tree=False) + [ "--work-tree=/tmp", "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
 
                           # tag the empty commit as gistore/0, never delete it.
                           self.get_command(work_tree=False) + [ "tag", "gistore/0" ],
@@ -129,11 +120,11 @@ class SCM(AbstractSCM):
                           self.get_command(work_tree=False) + [ "rm", "--cached", "-r", "-f", "-q", "." ],
 
                           # a empty commit is used as root commit of rotate backup
-                          self.command + [ "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
+                          self.get_command(work_tree=False) + [ "--work-tree=/tmp", "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
 
                           # switch to master
                           self.get_command(work_tree=False) + [ "symbolic-ref", "HEAD", "refs/heads/master" ],
-                          self.command + [ "reset", "HEAD" ],
+                          self.get_command(work_tree=False) + [ "--work-tree=/tmp", "reset", "HEAD" ],
                          ]
 
         commands +=[ 

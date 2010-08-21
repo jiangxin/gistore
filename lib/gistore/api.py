@@ -110,7 +110,10 @@ class Gistore(object):
 
         # Scm backend initialized.
         scm = __import__("gistore.scm."+self.repo_cfg["main.backend"], globals(), {}, ["SCM"])
-        self.scm = scm.SCM(self.root, self.repo_cfg["main.backup_history"], self.repo_cfg["main.backup_copies"])
+        work_tree = "/var/run/gistore/%s" % ( self.taskname or os.path.basename( self.root ) )
+        work_tree = os.path.join( work_tree, str( os.getpid() ) )
+        self.WORK_TREE = work_tree
+        self.scm = scm.SCM(self.root, work_tree=self.WORK_TREE, backup_history=self.repo_cfg["main.backup_history"], backup_copies=self.repo_cfg["main.backup_copies"])
 
         # Upgrade scm if needed.
         if old_version is not None and old_version != versions.GISTORE_VERSION:
@@ -358,15 +361,20 @@ class Gistore(object):
                     v.get("keep_empty_dir") and "K" or "-")
 
     def __mnt_target(self, p):
-        assert self.scm.WORK_TREE == 'run-time'
-
         if p == os.path.join(self.root, GISTORE_CONFIG_DIR):
-            return os.path.join( self.root, self.scm.WORK_TREE, GISTORE_CONFIG_DIR.rstrip('/') )
+            return os.path.join( self.root, self.WORK_TREE, GISTORE_CONFIG_DIR.rstrip('/') )
         else:
-            return os.path.join( self.root, self.scm.WORK_TREE, p.lstrip('/'))
+            return os.path.join( self.root, self.WORK_TREE, p.lstrip('/'))
 
     def mount(self):
         self.lock("mount")
+
+        # Create work_tree if not exists.
+        if not os.path.exists( self.WORK_TREE ):
+            try:
+                os.makedirs( self.WORK_TREE, mode=0777 )
+            except OSError:
+                raise PemissionDeniedError("Can not create run-time dir: %s. You can override it in config file." % self.WORK_TREE)
 
         for p in self.store_list.keys():
             if os.path.isdir(p):
@@ -406,7 +414,7 @@ class Gistore(object):
 
         output = Popen([ "mount" ], stdout=PIPE, stderr=STDOUT, close_fds=True ).communicate()[0]
         pattern = re.compile(r"^(.*) on (.*) type .*$")
-        mount_root = os.path.realpath( os.path.join( self.root, self.scm.WORK_TREE) )
+        mount_root = os.path.realpath( os.path.join( self.root, self.WORK_TREE) )
         mount_list = []
         for line in output.splitlines():
             m = pattern.search(line)
@@ -440,7 +448,21 @@ class Gistore(object):
                     if target.startswith( mount_root ) and target != mount_root :
                         self.removedirs( target )
 
+        # remote WORK_TREE dirs
+        if os.path.exists( os.path.join( self.WORK_TREE, ".gitignore" ) ):
+            os.unlink( os.path.join( self.WORK_TREE, ".gitignore" ) )
+        runtimedir = self.WORK_TREE
+        while runtimedir.startswith("/var/run/gistore/"):
+            try:
+                if os.path.exists( runtimedir ):
+                    os.rmdir( runtimedir )
+            except:
+                log.error("Can not remove runtime-dir: %s" % runtimedir)
+                break
+            runtimedir = os.path.dirname( runtimedir )
+
         self.unlock("mount")
+
 
     def cleanup(self):
         self.unlock("commit")

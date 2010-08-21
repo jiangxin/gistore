@@ -3,10 +3,17 @@
 #DEB_PYTHON_SYSTEM=pysupport
 DEB_PYTHON_SYSTEM=pycentral
 
+DEB_FIXPERMS_EXCLUDE_ALL=/var/run/gistore
+
 # Debhelper must be included before python-distutils to use
 # dh_python / dh_pycentral / dh_pysupport
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/python-distutils.mk
 include /usr/share/cdbs/1/rules/patchsys-quilt.mk
 
+binary-fixup/gistore::
+	chmod a+rwx debian/gistore/var/run/gistore
+
 .PHONY: debian/patches
+
+# vim: noet ts=4 sw=4

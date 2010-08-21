@@ -20,13 +20,13 @@ from gistore.errors import *
 
 class AbstractSCM(object):
 
-    WORK_TREE = "."
 
-    def __init__(self, root="", backup_history=0, backup_copies=0):
+    def __init__(self, root="", work_tree=".", backup_history=0, backup_copies=0):
         self.set_root(root)
         self.backup_history = backup_history
         self.backup_copies  = backup_copies
         self.username = pwd.getpwuid(os.getuid())[0] or "gistore"
+        self.WORK_TREE = work_tree
 
     def set_root(self, root=""):
         if not root:
