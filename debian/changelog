@@ -1,3 +1,10 @@
+gistore (0.2.4-7) unstable; urgency=low
+
+  * rotate gistore backp using branches not tags, because tags update
+    can not propagate
+
+ -- Jiang Xin <worldhello.net@gmail.com>  Sat, 21 Aug 2010 13:18:03 +0800
+
 gistore (0.2.4-6) unstable; urgency=low
 
   * Setup gistore system user account and sshd config.

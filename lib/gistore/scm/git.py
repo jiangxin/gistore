@@ -188,15 +188,15 @@ class SCM(AbstractSCM):
             return
 
         log.info( "Begin backup rotate, for %d >= %d." % (count, self.backup_history) )
-        # list tags
-        args = self.get_command(work_tree=False) + [ "tag" ]
+        # list branches with prefix: gistore/
+        args = self.get_command(work_tree=False) + [ "branch" ]
         proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=None, close_fds=True)
         lines = sorted( proc.communicate()[0].splitlines() )
         if proc.returncode != 0:
             msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
             log.critical( msg )
             if lines:
-                log.critical( "Command output:\n" + ''.join(lines))
+                log.critical( "Command output:\n" + ''.join(lines) )
             raise CommandError( msg )
         tagids = []
         for tag in lines:
@@ -217,30 +217,30 @@ class SCM(AbstractSCM):
         # rotate tags, and add new tag
         if len(tagids) >= self.backup_copies:
             for i in range(1, self.backup_copies):
-                cmd = self.get_command(work_tree=False) + [ "tag", "-f", "gistore/%d" % i, "gistore/%d" % tagids[ i - self.backup_copies ] ]
+                cmd = self.get_command(work_tree=False) + [ "update-ref", "refs/heads/gistore/%d" % i, "refs/heads/gistore/%d" % tagids[ i - self.backup_copies ] ]
                 command_list.append(cmd)
             for i in tagids:
                 if i in range(1, self.backup_copies):
                     continue
-                cmd = self.get_command(work_tree=False) + [ "tag", "-d", "gistore/%d" % i ]
+                cmd = self.get_command(work_tree=False) + [ "branch", "-D", "gistore/%d" % i ]
                 command_list.append(cmd)
-            cmd = self.get_command(work_tree=False) + [ "tag", "gistore/%d" % self.backup_copies, "master" ]
+            cmd = self.get_command(work_tree=False) + [ "branch", "gistore/%d" % self.backup_copies, "master" ]
             command_list.append(cmd)
         else:
             if len(tagids) > 0:
-                cmd = self.get_command(work_tree=False) + [ "tag", "gistore/%d" % (tagids[-1] + 1), "master" ]
+                cmd = self.get_command(work_tree=False) + [ "branch", "gistore/%d" % (tagids[-1] + 1), "master" ]
             else:
-                cmd = self.get_command(work_tree=False) + [ "tag", "gistore/1", "master" ]
+                cmd = self.get_command(work_tree=False) + [ "branch", "gistore/1", "master" ]
             command_list.append(cmd)
 
         # reset master to gistore/0
-        cmd = self.get_command(work_tree=False) + [ "update-ref", "refs/heads/master", "gistore/0" ]
-        command_list.append(cmd)
-        # do gc
-        cmd = self.get_command(work_tree=False) + [ "gc" ]
+        cmd = self.get_command(work_tree=False) + [ "update-ref", "refs/heads/master", "refs/tags/gistore/0" ]
         command_list.append(cmd)
         # reset HEAD
         cmd = self.get_command() + [ "reset", "HEAD" ]
+        command_list.append(cmd)
+        # do gc
+        cmd = self.get_command(work_tree=False) + [ "gc" ]
         command_list.append(cmd)
 
         for i in range(len(command_list)):
