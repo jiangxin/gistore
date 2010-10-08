@@ -131,7 +131,7 @@ class GistoreCmd(object):
             except Exception, e:
                 logging.critical( get_exception(e) )
                 # remove lock files...
-                GistoreCmd.gistobj.cleanup()
+                GistoreCmd.cleanup()
                 continue
 
 
@@ -177,7 +177,7 @@ class GistoreCmd(object):
                 continue
             except Exception, e:
                 logging.critical( get_exception(e) )
-                GistoreCmd.gistobj.cleanup()
+                GistoreCmd.cleanup()
                 continue
 
     @staticmethod
@@ -217,7 +217,7 @@ class GistoreCmd(object):
             except Exception, e:
                 logging.critical( get_exception(e) )
                 # remove lock files...
-                GistoreCmd.gistobj.cleanup()
+                GistoreCmd.cleanup()
                 continue
 
 
