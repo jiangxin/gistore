@@ -354,11 +354,11 @@ class Gistore(object):
         print "%18s : %s" %  ("Backend", self.repo_cfg["main.backend"])
         print "%18s : %d commits * %d copies" %  ( "Backup capability", self.repo_cfg["main.backup_history"], self.repo_cfg["main.backup_copies"] )
         print "%18s :" % "Backup list"
-        for k,v in self.store_list.iteritems():
-            print "    %s (%s%s)" % (
+        for k,v in sorted(self.store_list.iteritems()):
+            print " " * 18 + "   %s (%s%s)" % (
                     k,
-                    v.get("keep_perm") and "P" or "-",
-                    v.get("keep_empty_dir") and "K" or "-")
+                    v.get("keep_perm") and "A" or "-",
+                    v.get("keep_empty_dir") and "D" or "-")
 
     def __mnt_target(self, p):
         if p == os.path.join(self.root, GISTORE_CONFIG_DIR):
