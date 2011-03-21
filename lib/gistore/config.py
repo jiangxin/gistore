@@ -89,7 +89,8 @@ class Config(DefaultConfig):
 def getConfig():
     try:
         #Initial sys_config_dir if not exists.
-        if not os.path.exists(os.path.join(DefaultConfig.sys_config_dir, 'local_config.py')):
+        if not os.path.exists( os.path.join( DefaultConfig.sys_config_dir,
+                                             'local_config.py' ) ):
             initConfig()
 
         # load custom config file in /etc/gistore/local_config.py

@@ -29,18 +29,27 @@ log = logging.getLogger('gist.git')
 class SCM(AbstractSCM):
 
 
-    def __init__(self, root="", work_tree="run-time", backup_history=0, backup_copies=0):
-        super(SCM, self).__init__(root, work_tree, backup_history, backup_copies)
-        os.putenv("GIT_COMMITTER_NAME", self.username)
-        os.putenv("GIT_COMMITTER_EMAIL", self.username+"@"+socket.gethostname())
-        self.GIT_DIR     = "repo.git"
+    def __init__( self, root="",
+                  work_tree="run-time",
+                  backup_history=0,
+                  backup_copies=0 ):
+        super(SCM, self).__init__( root,
+                                   work_tree,
+                                   backup_history,
+                                   backup_copies )
+        os.putenv( "GIT_COMMITTER_NAME", self.username )
+        os.putenv( "GIT_COMMITTER_EMAIL",
+                   self.username+"@"+socket.gethostname() )
+        self.GIT_DIR = "repo.git"
 
-    def get_command(self, git_dir=True, work_tree=True):
+    def get_command( self, git_dir=True, work_tree=True ):
         args = [ "git" ]
         if git_dir:
-            args.append( "--git-dir=%s" % os.path.join(self.root, self.GIT_DIR) )
+            args.append( "--git-dir=%s" % os.path.join( self.root,
+                                                        self.GIT_DIR) )
         if work_tree:
-            args.append( "--work-tree=%s" % os.path.join(self.root, self.WORK_TREE) )
+            args.append( "--work-tree=%s" % os.path.join( self.root,
+                                                          self.WORK_TREE) )
 
         return args
 
@@ -48,7 +57,9 @@ class SCM(AbstractSCM):
 
 
     def is_repos(self):
-        return os.path.exists( os.path.join(self.root, self.GIT_DIR, 'objects') )
+        return os.path.exists( os.path.join( self.root,
+                                             self.GIT_DIR,
+                                             'objects') )
 
 
     def init(self):
@@ -58,28 +69,44 @@ class SCM(AbstractSCM):
 
         commands = [ 
                     # git init command can not work with --work-tree arguments.
-                    [ "git", "init", "--bare", os.path.join(self.root, self.GIT_DIR) ],
+                    [ "git", "init", "--bare", os.path.join( self.root,
+                                                             self.GIT_DIR) ],
 
                     # a empty commit is used as root commit of rotate backup
-                    self.get_command(work_tree=False) + [ "--work-tree=/tmp", "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
+                    self.get_command(work_tree=False) + [
+                        "--work-tree=/tmp",
+                        "commit",
+                        "--allow-empty",
+                        "-m",
+                        "gistore root commit initialized." ],
 
                     # tag the empty commit as gistore/0, never delete it.
                     self.get_command(work_tree=False) + [ "tag", "gistore/0" ],
 
                     # set local git config, which not affect by global config
-                    self.get_command(work_tree=False) + [ "config", "core.autocrlf", "false" ],
-                    self.get_command(work_tree=False) + [ "config", "core.safecrlf", "false" ],
-                    self.get_command(work_tree=False) + [ "config", "core.symlinks", "true" ],
-                    self.get_command(work_tree=False) + [ "config", "core.trustctime", "false" ],
-                    self.get_command(work_tree=False) + [ "config", "core.sharedRepository", "group" ],
+                    self.get_command(work_tree=False) + [
+                        "config", "core.autocrlf", "false" ],
+                    self.get_command(work_tree=False) + [
+                        "config", "core.safecrlf", "false" ],
+                    self.get_command(work_tree=False) + [
+                        "config", "core.symlinks", "true" ],
+                    self.get_command(work_tree=False) + [
+                        "config", "core.trustctime", "false" ],
+                    self.get_command(work_tree=False) + [
+                        "config", "core.sharedRepository", "group" ],
 
                     # in case of merge, use ours instead.
-                    self.get_command(work_tree=False) + [ "config", "merge.ours.name", "\"always keep ours\" merge driver" ],
-                    self.get_command(work_tree=False) + [ "config", "merge.ours.driver", "touch %A" ],
+                    self.get_command(work_tree=False) + [
+                        "config", "merge.ours.name", "\"always keep ours\" merge driver" ],
+                    self.get_command(work_tree=False) + [
+                        "config", "merge.ours.driver", "touch %A" ],
                    ]
 
         for args in commands:
-            proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            proc = subprocess.Popen( args,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     close_fds=True )
             exception_if_error(proc, args)
 
         #log.debug("create .gitignore")
@@ -101,57 +128,88 @@ class SCM(AbstractSCM):
 
         commands = []
         args = self.get_command(work_tree=False) + [ "show-ref" ]
-        returncode = subprocess.call( args=args, stdout=sys.stderr, close_fds=True )
+        returncode = subprocess.call( args=args,
+                                      stdout=sys.stderr,
+                                      close_fds=True )
         # repo.git has no commit yet
         if returncode != 0:
             commands += [
                           # a empty commit is used as root commit of rotate backup
-                          self.get_command(work_tree=False) + [ "--work-tree=/tmp", "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
+                          self.get_command(work_tree=False) + [
+                                "--work-tree=/tmp",
+                                "commit",
+                                "--allow-empty",
+                                "-m",
+                                "gistore root commit initialized." ],
 
                           # tag the empty commit as gistore/0, never delete it.
-                          self.get_command(work_tree=False) + [ "tag", "gistore/0" ],
+                          self.get_command(work_tree=False) + [
+                                "tag", "gistore/0" ],
                          ]
         else:
             commands += [
                           # switch to a unexist ref
-                          self.get_command(work_tree=False) + [ "symbolic-ref", "HEAD", "refs/tags/gistore/0" ],
+                          self.get_command(work_tree=False) + [
+                                "symbolic-ref", "HEAD", "refs/tags/gistore/0" ],
 
                           # remove cached index
-                          self.get_command(work_tree=False) + [ "rm", "--cached", "-r", "-f", "-q", "." ],
+                          self.get_command(work_tree=False) + [
+                                "rm", "--cached", "-r", "-f", "-q", "." ],
 
                           # a empty commit is used as root commit of rotate backup
-                          self.get_command(work_tree=False) + [ "--work-tree=/tmp", "commit", "--allow-empty", "-m", "gistore root commit initialized." ],
+                          self.get_command(work_tree=False) + [
+                                "--work-tree=/tmp",
+                                "commit",
+                                "--allow-empty",
+                                "-m",
+                                "gistore root commit initialized." ],
 
                           # switch to master
-                          self.get_command(work_tree=False) + [ "symbolic-ref", "HEAD", "refs/heads/master" ],
-                          self.get_command(work_tree=False) + [ "--work-tree=/tmp", "reset", "HEAD" ],
+                          self.get_command(work_tree=False) + [
+                                "symbolic-ref", "HEAD", "refs/heads/master" ],
+                          self.get_command(work_tree=False) + [
+                                "--work-tree=/tmp", "reset", "HEAD" ],
                          ]
 
         commands +=[ 
                     # set as bare repos
-                    self.get_command(work_tree=False) + [ "config", "core.bare", "true" ],
+                    self.get_command(work_tree=False) + [
+                            "config", "core.bare", "true" ],
 
                     # set local git config, which not affect by global config
-                    self.get_command(work_tree=False) + [ "config", "core.autocrlf", "false" ],
-                    self.get_command(work_tree=False) + [ "config", "core.safecrlf", "false" ],
-                    self.get_command(work_tree=False) + [ "config", "core.symlinks", "true" ],
-                    self.get_command(work_tree=False) + [ "config", "core.trustctime", "false" ],
-                    self.get_command(work_tree=False) + [ "config", "core.sharedRepository", "group" ],
+                    self.get_command(work_tree=False) + [
+                            "config", "core.autocrlf", "false" ],
+                    self.get_command(work_tree=False) + [
+                            "config", "core.safecrlf", "false" ],
+                    self.get_command(work_tree=False) + [
+                            "config", "core.symlinks", "true" ],
+                    self.get_command(work_tree=False) + [
+                            "config", "core.trustctime", "false" ],
+                    self.get_command(work_tree=False) + [
+                            "config", "core.sharedRepository", "group" ],
 
                     # in case of merge, use ours instead.
-                    self.get_command(work_tree=False) + [ "config", "merge.ours.name", "\"always keep ours\" merge driver" ],
-                    self.get_command(work_tree=False) + [ "config", "merge.ours.driver", "touch %A" ],
+                    self.get_command(work_tree=False) + [
+                            "config", "merge.ours.name", "\"always keep ours\" merge driver" ],
+                    self.get_command(work_tree=False) + [
+                            "config", "merge.ours.driver", "touch %A" ],
                    ]
 
         for args in commands:
-            proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            proc = subprocess.Popen( args,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     close_fds=True)
             exception_if_error(proc, args)
 
 
     def _get_commit_count(self):
         args = self.get_command(work_tree=False) + [ "rev-list", "master" ]
         log.debug(" ".join(args))
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=None, close_fds=True)
+        proc = subprocess.Popen( args,
+                                 stdout=subprocess.PIPE,
+                                 stderr=None,
+                                 close_fds=True )
         lines = proc.communicate()[0].splitlines()
         if proc.returncode != 0:
             msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
@@ -175,13 +233,18 @@ class SCM(AbstractSCM):
         count = self._get_commit_count()
         # the first commit is a blank commit
         if count < self.backup_history:
-            log.debug( "No backup rotate needed. %d < %d." % (count, self.backup_history) )
+            log.debug( "No backup rotate needed. %d < %d." % 
+                        ( count, self.backup_history ) )
             return
 
-        log.info( "Begin backup rotate, for %d >= %d." % (count, self.backup_history) )
+        log.info( "Begin backup rotate, for %d >= %d." %
+                    ( count, self.backup_history ) )
         # list branches with prefix: gistore/
         args = self.get_command(work_tree=False) + [ "branch" ]
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=None, close_fds=True)
+        proc = subprocess.Popen( args,
+                                 stdout=subprocess.PIPE,
+                                 stderr=None,
+                                 close_fds=True )
         lines = sorted( proc.communicate()[0].splitlines() )
         if proc.returncode != 0:
             msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
@@ -208,24 +271,32 @@ class SCM(AbstractSCM):
         # rotate tags, and add new tag
         if len(tagids) >= self.backup_copies:
             for i in range(1, self.backup_copies):
-                cmd = self.get_command(work_tree=False) + [ "update-ref", "refs/heads/gistore/%d" % i, "refs/heads/gistore/%d" % tagids[ i - self.backup_copies ] ]
+                cmd = self.get_command(work_tree=False) + [
+                        "update-ref", "refs/heads/gistore/%d" % i,
+                        "refs/heads/gistore/%d" %
+                            tagids[ i - self.backup_copies ] ]
                 command_list.append(cmd)
             for i in tagids:
                 if i in range(1, self.backup_copies):
                     continue
-                cmd = self.get_command(work_tree=False) + [ "branch", "-D", "gistore/%d" % i ]
+                cmd = self.get_command(work_tree=False) + [
+                        "branch", "-D", "gistore/%d" % i ]
                 command_list.append(cmd)
-            cmd = self.get_command(work_tree=False) + [ "branch", "gistore/%d" % self.backup_copies, "master" ]
+            cmd = self.get_command(work_tree=False) + [
+                    "branch", "gistore/%d" % self.backup_copies, "master" ]
             command_list.append(cmd)
         else:
             if len(tagids) > 0:
-                cmd = self.get_command(work_tree=False) + [ "branch", "gistore/%d" % (tagids[-1] + 1), "master" ]
+                cmd = self.get_command(work_tree=False) + [
+                        "branch", "gistore/%d" % (tagids[-1] + 1), "master" ]
             else:
-                cmd = self.get_command(work_tree=False) + [ "branch", "gistore/1", "master" ]
+                cmd = self.get_command(work_tree=False) + [
+                        "branch", "gistore/1", "master" ]
             command_list.append(cmd)
 
         # reset master to gistore/0
-        cmd = self.get_command(work_tree=False) + [ "update-ref", "refs/heads/master", "refs/tags/gistore/0" ]
+        cmd = self.get_command(work_tree=False) + [
+                "update-ref", "refs/heads/master", "refs/tags/gistore/0" ]
         command_list.append(cmd)
         # reset HEAD
         cmd = self.get_command() + [ "reset", "HEAD" ]
@@ -236,7 +307,10 @@ class SCM(AbstractSCM):
 
         for i in range(len(command_list)):
             log.debug( "Backup rotate step %d" % i )
-            proc = subprocess.Popen(command_list[i], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            proc = subprocess.Popen( command_list[i],
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     close_fds=True )
             exception_if_error(proc, command_list[i])
 
 
@@ -257,7 +331,8 @@ class SCM(AbstractSCM):
             total = len( commit_st )
             buffer.append( "Changes summary: total= %(total)d, %(detail)s" % {
                     'total': total,
-                    'detail': ", ".join( [ "%s: %d" % (k, len(status[k])) for k in sorted(status.keys()) ] ),
+                    'detail': ", ".join( [ "%s: %d" % (k, len(status[k]))
+                                        for k in sorted(status.keys()) ] ),
                     } )
             buffer.append( "-" * len(buffer[0]) )
             for k in sorted(status.keys()):
@@ -269,7 +344,8 @@ class SCM(AbstractSCM):
                 else:
                     for i in range(sample):
                         brief_st.append( status[k][i*step] )
-                    brief_st.append( "...%d more..." % ( len(status[k]) - sample ) )
+                    brief_st.append( "...%d more..." %
+                                            ( len(status[k]) - sample ) )
                 buffer.append( "    %s => %s" % ( k, ", ".join(brief_st) ) )
 
             return "\n".join(buffer)
@@ -280,28 +356,50 @@ class SCM(AbstractSCM):
             # submodule already deleted in cache
 
             # add tmp file in submodule
-            open( os.path.join( self.root, self.WORK_TREE, submodule, '.gistore-submodule'), 'w' ).close()
+            open( os.path.join( self.root,
+                                self.WORK_TREE,
+                                submodule,
+                                '.gistore-submodule'), 'w' ).close()
 
             # git add tmp file in submodule
-            args = self.command + [ "add", "-f", os.path.join( submodule, '.gistore-submodule' ) ]
-            proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            args = self.command + [ "add",
+                                    "-f",
+                                    os.path.join( submodule,
+                                                  '.gistore-submodule' ) ]
+            proc_add = subprocess.Popen( args,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT,
+                                         close_fds=True)
             exception_if_error(proc_add, args)
 
             # git add whole submodule dir
             args = self.command + [ "add", submodule ]
-            proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            proc_add = subprocess.Popen( args,
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT,
+                                         close_fds=True )
             exception_if_error(proc_add, args)
 
             # git rm -f tmp file in submodule
-            args = self.command + [ "rm", "-f", os.path.join( submodule, '.gistore-submodule' ) ]
-            proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            args = self.command + [ "rm",
+                                    "-f",
+                                    os.path.join( submodule,
+                                                  '.gistore-submodule' ) ]
+            proc_rm = subprocess.Popen( args,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        close_fds=True )
             exception_if_error(proc_rm, args)
 
             # check status --porcelain and append to status[]
             args = self.command + [ "status", "--porcelain", submodule ]
             log.debug(" ".join(args))
-            proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-            status.extend( [ line for line in proc_st.communicate()[0].splitlines() ] )
+            proc_st = subprocess.Popen( args,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        close_fds=True )
+            status.extend( [ line for line in
+                             proc_st.communicate()[0].splitlines() ] )
             return status
 
 
@@ -312,33 +410,52 @@ class SCM(AbstractSCM):
         self.backup_rotate()
 
         args = self.command + [ "add", "." ]
-        proc_add = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+        proc_add = subprocess.Popen( args,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     close_fds=True )
         exception_if_error(proc_add, args)
 
         # delete files but keep directories.
         if True:
             args = self.command + [ "ls-files", "--deleted" ]
             log.debug(" ".join(args))
-            proc_ls = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            proc_ls = subprocess.Popen( args,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        close_fds=True )
             deleted_files = []
             for file in proc_ls.communicate()[0].splitlines():
                 deleted_files.append(file)
             if deleted_files:
                 try:
                     # `git rm --cached` will not remote blank-dir.
-                    args = self.get_command(work_tree=False) + [ "rm", "--cached", "--quiet" ] + deleted_files
-                    proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+                    args = self.get_command(work_tree=False) + \
+                            [ "rm", "--cached", "--quiet" ] + \
+                            deleted_files
+                    proc_rm = subprocess.Popen( args,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.STDOUT,
+                                                close_fds=True)
                     warn_if_error(proc_rm, args)
                 except OSError, e:
                     if "Argument list too long" in e:
                         for file in deleted_files:
-                            args = self.get_command(work_tree=False) + [ "rm", "--cached", "--quiet", file ]
-                            proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+                            args = self.get_command(work_tree=False) + [
+                                    "rm", "--cached", "--quiet", file ]
+                            proc_rm = subprocess.Popen(
+                                                args,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.STDOUT,
+                                                close_fds=True )
                             warn_if_error(proc_rm, args)
 
         args = self.command + [ "status", "--porcelain" ]
         log.debug(" ".join(args))
-        proc_st = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+        proc_st = subprocess.Popen( args,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    close_fds=True)
         commit_stat = [ line for line in proc_st.communicate()[0].splitlines() ]
 
         submodules = self.remove_submodules()
@@ -358,7 +475,8 @@ class SCM(AbstractSCM):
         if commit_stat:
             log.info( "Backup changes for %s\n%s" % (self.root, message) )
         else:
-            log.info( "*Nothing changed*, no backup for %s\n%s" % (self.root, message) )
+            log.info( "*Nothing changed*, no backup for %s\n%s" % (
+                        self.root, message ) )
 
         msgfile = os.path.join( self.root, GISTORE_LOG_DIR, "COMMIT_MSG" )
         fp = open( msgfile, "w" )
@@ -366,15 +484,25 @@ class SCM(AbstractSCM):
         fp.close()
 
         args = self.command + [ "commit", "--quiet", "-F", msgfile ]
-        proc_ci = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+        proc_ci = subprocess.Popen( args,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    close_fds=True )
         # If nothing to commit, git commit return 1.
-        exception_if_error( proc_ci, args, lambda n: n.startswith("nothing to commit") or n.startswith("no changes added to commit") )
+        exception_if_error( proc_ci,
+                            args,
+                            lambda n: n.startswith("nothing to commit")
+                            or n.startswith("no changes added to commit") )
 
 
     def remove_submodules(self):
         submodules = []
-        args = self.get_command(work_tree=False) + [ "--work-tree=.", "submodule", "status" ]
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+        args = self.get_command(work_tree=False) + [
+                    "--work-tree=.", "submodule", "status" ]
+        proc = subprocess.Popen( args,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 close_fds=True )
         pat1 = re.compile(r".\w{40} (\w*) \(.*\)?")
         pat2 = re.compile(r"No submodule mapping found in .gitmodules for path '(.*)'")
         for line in proc.communicate()[0].splitlines():
@@ -387,9 +515,14 @@ class SCM(AbstractSCM):
                 submodules.append(m.group(1))
 
         if submodules:
-            log.warning("Remove submodules in backup:"+"\n    "+" ".join(submodules))
-            args = self.get_command(work_tree=False) + [ "rm", "--cached", "-q" ] + submodules
-            proc_rm = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+            log.warning( "Remove submodules in backup:" + 
+                         "\n    " + " ".join(submodules) )
+            args = self.get_command(work_tree=False) + [
+                        "rm", "--cached", "-q" ] + submodules
+            proc_rm = subprocess.Popen( args,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.STDOUT,
+                                        close_fds=True)
             exception_if_error(proc_rm, args)
 
             # maybe other submodules

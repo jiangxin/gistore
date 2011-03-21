@@ -38,7 +38,8 @@ Options:
 
 Available command:
     list
-        List tasks linked to /etc/gistore/tasks/
+        List tasks linked to $HOME/.gistore/tasks or
+        /etc/gistore/tasks/ for root user.
 
     status [task or direcotry]
         Show backup repository's backup list and other status
@@ -325,7 +326,8 @@ class GistoreCmd(object):
             signal.signal(signal.SIGPIPE, GistoreCmd.sigint_handler)
             signal.signal(signal.SIGTERM, GistoreCmd.sigint_handler)
 
-            if 'do_'+command in filter(lambda n: n.startswith('do_'), dir(GistoreCmd)):
+            if 'do_'+command in filter( lambda n: n.startswith('do_'),
+                                        dir(GistoreCmd) ):
                 getattr(GistoreCmd, 'do_' + command)(args)
             else:
                 return GistoreCmd.usage(1, "Unknown command: %s" % command)

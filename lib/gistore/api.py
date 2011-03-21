@@ -52,10 +52,10 @@ class Gistore(object):
 
     def __init_task(self, taskname, create):
         """Set default root dir according to task name. Task name can be:
-          * Task name in /etc/gistore/tasks/, which is a symbol link to real
-            gistore backup directory
-          * Absolute dir name, such as: /backup/store1/
-          * Relative dir name from current working directory
+          * Task name in $HOME/.gistore/tasks/ or /etc/gistore/tasks (for root
+            user), which is a symbol link to real gistore backup directory.
+          * Absolute dir name, such as: /backup/store1/.
+          * Relative dir name from current working directory.
         """
         if not taskname:
             taskname = os.getcwd()
@@ -74,11 +74,17 @@ class Gistore(object):
 
         if create:
             if os.path.exists( self.root ):
-                raise TaskAlreadyExistsError("Task already exists in: %s." % self.root)
+                raise TaskAlreadyExistsError( "Task already exists in: %s." % (
+                                              self.root) )
             else:
                 os.makedirs(self.root)
-        elif not os.path.exists( os.path.join(self.root, GISTORE_CONFIG_DIR, "config") ):
-                raise TaskNotExistsError("Task does not exists: %s." % os.path.join(self.root, GISTORE_CONFIG_DIR, "config") )
+        elif not os.path.exists( os.path.join( self.root,
+                                               GISTORE_CONFIG_DIR,
+                                               "config") ):
+                raise TaskNotExistsError( "Task does not exists: %s." % (
+                                          os.path.join( self.root,
+                                                        GISTORE_CONFIG_DIR,
+                                                        "config") ) )
 
         # Create needed directories
         check_dirs = [ os.path.join( self.root, GISTORE_LOG_DIR ),
@@ -88,16 +94,21 @@ class Gistore(object):
                 os.makedirs( dir )
 
         # Set file log
-        filelog = logging.FileHandler( os.path.join( self.root, GISTORE_LOG_DIR, "gitstore.log" ) )
+        filelog = logging.FileHandler( os.path.join( self.root,
+                                                     GISTORE_LOG_DIR,
+                                                     "gitstore.log" ) )
         filelog.setLevel( cfg.log_level )
         # set a format which is simpler for filelog use
-        formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+        formatter = logging.Formatter(
+                        '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+                        )
         filelog.setFormatter(formatter)
         # add the handler to the root logger
         logging.getLogger('').addHandler(filelog)
 
 
-        # Taskname is the abbr. link dir name in /etc/gistore/tasks/
+        # Taskname is the abbr. link dir name in $HOME/.gistore/tasks
+        # or /etc/gistore/tasks/ for root user.
         self.taskname = self.dir2task(self.root)
 
         # Initail self.store_list from .gistore/config file.
@@ -109,11 +120,16 @@ class Gistore(object):
             self.upgrade(self.repo_cfg)
 
         # Scm backend initialized.
-        scm = __import__("gistore.scm."+self.repo_cfg["main.backend"], globals(), {}, ["SCM"])
-        work_tree = "/var/run/gistore/%s" % ( self.taskname or os.path.basename( self.root ) )
+        scm = __import__( "gistore.scm."+self.repo_cfg["main.backend"],
+                          globals(), {}, ["SCM"] )
+        work_tree = "/var/run/gistore/%s" % ( self.taskname or
+                                              os.path.basename( self.root ) )
         work_tree = os.path.join( work_tree, str( os.getpid() ) )
         self.WORK_TREE = work_tree
-        self.scm = scm.SCM(self.root, work_tree=self.WORK_TREE, backup_history=self.repo_cfg["main.backup_history"], backup_copies=self.repo_cfg["main.backup_copies"])
+        self.scm = scm.SCM(self.root,
+                        work_tree=self.WORK_TREE,
+                        backup_history=self.repo_cfg["main.backup_history"],
+                        backup_copies=self.repo_cfg["main.backup_copies"])
 
         # Upgrade scm if needed.
         if old_version is not None and old_version != versions.GISTORE_VERSION:
@@ -122,7 +138,9 @@ class Gistore(object):
         # Check uid
         if os.getuid() != 0:
             if self.repo_cfg["main.root_only"]:
-                raise PemissionDeniedError("Only root user allowed for task: %s" % (self.taskname or self.root))
+                raise PemissionDeniedError(
+                    "Only root user allowed for task: %s" % (
+                    self.taskname or self.root))
 
 
 
@@ -166,12 +184,16 @@ class Gistore(object):
             if key.startswith("default."):
                 default_buffer.append( "%s = %s" % (
                          key[8:],
-                         isinstance(val, bool) and ( val and "yes" or "no") or val,
+                         isinstance(val, bool)
+                         and ( val and "yes" or "no")
+                         or val,
                          ) )
             elif key.startswith("main."):
                 main_buffer.append( "%s = %s" % (
                          key[5:],
-                         isinstance(val, bool) and ( val and "yes" or "no") or val,
+                         isinstance(val, bool)
+                         and ( val and "yes" or "no")
+                         or val,
                          ) )
 
         store_buffer = []
@@ -263,7 +285,8 @@ class Gistore(object):
                         continue
 
                     # check if p is parent of self.root
-                    elif self.root.startswith(os.path.join(p,"")) or self.root == p:
+                    elif ( self.root.startswith(os.path.join(p,"")) or
+                           self.root == p ):
                         log.error("Not store root's parent dir: %s" % p)
                         continue
 
@@ -290,15 +313,18 @@ class Gistore(object):
             cp=ConfigParser()
             cp.read(config_file)
             if cp.has_option('main', 'backend'):
-                repo_cfg["main.backend"] = cp.get('main', 'backend')
+                repo_cfg["main.backend"] = cp.get( 'main', 'backend' )
             if cp.has_option('main', 'root_only'):
-                repo_cfg["main.root_only"] = cp.getboolean('main', 'root_only')
+                repo_cfg["main.root_only"] = cp.getboolean( 'main',
+                                                            'root_only' )
             if cp.has_option('main', 'backup_history'):
-                repo_cfg["main.backup_history"] = cp.getint('main', 'backup_history')
+                repo_cfg["main.backup_history"] = cp.getint( 'main',
+                                                             'backup_history' )
             if cp.has_option('main', 'backup_copies'):
-                repo_cfg["main.backup_copies"] = cp.getint('main', 'backup_copies')
+                repo_cfg["main.backup_copies"] = cp.getint( 'main',
+                                                            'backup_copies' )
             if cp.has_option('main', 'version'):
-                repo_cfg["main.version"] = cp.getint('main', 'version')
+                repo_cfg["main.version"] = cp.getint( 'main', 'version' )
             else:
                 # old version, needs to upgrade
                 repo_cfg["main.version"] = 1
@@ -310,10 +336,12 @@ class Gistore(object):
                 self.store_list[path] = get_default(repo_cfg)
                 self.store_list[path]["_system_"] = True
 
-            for section in filter(lambda n: n.startswith('store '), cp.sections()):
+            for section in filter( lambda n: n.startswith('store '),
+                                    cp.sections() ):
                 self.store_list[section[6:].strip()] = get_default(repo_cfg)
 
-            for section in filter(lambda n: n.startswith('store '), cp.sections()):
+            for section in filter( lambda n: n.startswith('store '),
+                                   cp.sections() ):
                 path = os.path.realpath(section[6:].strip())
                 if path in self.store_list.keys():
                     update_config(self.store_list[path], cp.items(section))
@@ -349,10 +377,13 @@ class Gistore(object):
         return None
 
     def status(self):
-        print "%18s : %s" % ("Task name", self.taskname and self.taskname or "-")
+        print "%18s : %s" % ("Task name",
+                self.taskname and self.taskname or "-")
         print "%18s : %s" % ("Directory", self.root)
-        print "%18s : %s" %  ("Backend", self.repo_cfg["main.backend"])
-        print "%18s : %d commits * %d copies" %  ( "Backup capability", self.repo_cfg["main.backup_history"], self.repo_cfg["main.backup_copies"] )
+        print "%18s : %s" % ("Backend", self.repo_cfg["main.backend"])
+        print "%18s : %d commits * %d copies" %  ( "Backup capability",
+                self.repo_cfg["main.backup_history"],
+                self.repo_cfg["main.backup_copies"] )
         print "%18s :" % "Backup list"
         for k,v in sorted(self.store_list.iteritems()):
             print " " * 18 + "   %s (%s%s)" % (
@@ -362,9 +393,11 @@ class Gistore(object):
 
     def __mnt_target(self, p):
         if p == os.path.join(self.root, GISTORE_CONFIG_DIR):
-            return os.path.join( self.root, self.WORK_TREE, GISTORE_CONFIG_DIR.rstrip('/') )
+            return os.path.join( self.root,
+                                 self.WORK_TREE,
+                                 GISTORE_CONFIG_DIR.rstrip('/') )
         else:
-            return os.path.join( self.root, self.WORK_TREE, p.lstrip('/'))
+            return os.path.join( self.root, self.WORK_TREE, p.lstrip('/') )
 
     def mount(self):
         self.lock("mount")
@@ -395,7 +428,10 @@ class Gistore(object):
                 log.warning("%s is already mounted." % target)
             else:
                 args = self.cmd_mount + [p, target]
-                proc_mnt = Popen( self.cmd_mount + [p, target], stdout=PIPE, stderr=STDOUT, close_fds=True )
+                proc_mnt = Popen( self.cmd_mount + [p, target],
+                                  stdout=PIPE,
+                                  stderr=STDOUT,
+                                  close_fds=True )
                 exception_if_error(proc_mnt, args)
 
     def removedirs(self, target):
@@ -412,9 +448,13 @@ class Gistore(object):
     def umount(self):
         self.assert_no_lock("commit")
 
-        output = Popen([ "mount" ], stdout=PIPE, stderr=STDOUT, close_fds=True ).communicate()[0]
+        output = Popen( [ "mount" ],
+                        stdout=PIPE,
+                        stderr=STDOUT,
+                        close_fds=True ).communicate()[0]
         pattern = re.compile(r"^(.*) on (.*) type .*$")
-        mount_root = os.path.realpath( os.path.join( self.root, self.WORK_TREE) )
+        mount_root = os.path.realpath( os.path.join( self.root,
+                                                     self.WORK_TREE ) )
         mount_list = []
         for line in output.splitlines():
             m = pattern.search(line)
@@ -427,25 +467,41 @@ class Gistore(object):
         for target, src in sorted( mount_list, reverse=True ):
             try:
                 args = self.cmd_umount + [ target ]
-                proc_umnt = Popen( args, stdout=PIPE, stderr=STDOUT, close_fds=True )
-                exception_if_error( proc_umnt, args, lambda n: n.endswith("not mounted") )
+                proc_umnt = Popen( args,
+                                   stdout=PIPE,
+                                   stderr=STDOUT,
+                                   close_fds=True )
+                exception_if_error( proc_umnt,
+                                    args,
+                                    lambda n: n.endswith("not mounted") )
             except:
                 args = self.cmd_umount_force + [ target ]
-                proc_umnt = Popen( args, stdout=PIPE, stderr=STDOUT, close_fds=True )
+                proc_umnt = Popen( args,
+                                   stdout=PIPE,
+                                   stderr=STDOUT,
+                                   close_fds=True )
 
                 args = self.cmd_umount_force + [ target ]
-                proc_umnt = Popen(args, stdout=PIPE, stderr=STDOUT, close_fds=True )
-                exception_if_error( proc_umnt, args, lambda n: n.endswith("not mounted") )
+                proc_umnt = Popen( args,
+                                   stdout=PIPE,
+                                   stderr=STDOUT,
+                                   close_fds=True )
+                exception_if_error( proc_umnt,
+                                    args,
+                                    lambda n: n.endswith("not mounted") )
 
         for target, src in sorted( mount_list, reverse=True ):
             log.debug("remove %s" % target)
-            if not self.is_mount(src, target) and target.startswith( mount_root ) and target != mount_root :
+            if ( not self.is_mount(src, target)
+                 and target.startswith( mount_root )
+                 and target != mount_root ):
                 if os.path.isdir(target):
                     self.removedirs(target)
                 else:
                     os.unlink(target)
                     target = os.path.dirname( target )
-                    if target.startswith( mount_root ) and target != mount_root :
+                    if ( target.startswith( mount_root )
+                         and target != mount_root ):
                         self.removedirs( target )
 
         # remote WORK_TREE dirs
@@ -478,7 +534,9 @@ class Gistore(object):
         self.scm.post_check()
 
     def has_lock(self, event):
-        lockfile = os.path.join( self.root, GISTORE_LOCK_DIR, "_gistore-lock-" + event )
+        lockfile = os.path.join( self.root,
+                                 GISTORE_LOCK_DIR,
+                                 "_gistore-lock-" + event )
         if os.path.exists( lockfile ):
             return True
         else:
@@ -487,23 +545,31 @@ class Gistore(object):
     def lock(self, event):
         self.assert_no_lock(event)
 
-        lockfile = os.path.join( self.root, GISTORE_LOCK_DIR, "_gistore-lock-" + event )
+        lockfile = os.path.join( self.root,
+                                 GISTORE_LOCK_DIR,
+                                 "_gistore-lock-" + event )
         f = open( lockfile, 'w' )
         f.write( str( os.getpid() ) )
         f.close()
 
     def assert_lock(self, event):
-        lockfile = os.path.join( self.root, GISTORE_LOCK_DIR, "_gistore-lock-" + event )
+        lockfile = os.path.join( self.root,
+                                 GISTORE_LOCK_DIR,
+                                 "_gistore-lock-" + event )
         if not os.path.exists( lockfile ):
             raise GistoreLockError( "Has not lock using: %s" % lockfile )
 
     def assert_no_lock(self, event):
-        lockfile = os.path.join( self.root, GISTORE_LOCK_DIR, "_gistore-lock-" + event )
+        lockfile = os.path.join( self.root,
+                                 GISTORE_LOCK_DIR,
+                                 "_gistore-lock-" + event )
         if os.path.exists( lockfile ):
             raise GistoreLockError( "Lock already exists: %s" % lockfile )
 
     def unlock(self, event):
-        lockfile = os.path.join( self.root, GISTORE_LOCK_DIR, "_gistore-lock-" + event )
+        lockfile = os.path.join( self.root,
+                                 GISTORE_LOCK_DIR,
+                                 "_gistore-lock-" + event )
         try:
             os.unlink( lockfile )
         except OSError:

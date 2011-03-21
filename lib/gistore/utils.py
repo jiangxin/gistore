@@ -27,14 +27,15 @@ def warn_if_error(proc, cmdline=""):
     if isinstance(cmdline, (list,tuple)):
         cmdline = " ".join(cmdline)
 
-    # use proc.communicate() instead of proc.wait() or read buffer before call proc.wait(),
-    # otherwize if buffer overflow, process will hang!
+    # use proc.communicate() instead of proc.wait() or read buffer before
+    # call proc.wait(), otherwize if buffer overflow, process will hang!
     output, error_output = proc.communicate()
     if error_output:
         output = output and output + "\n" + error_output or error_output
 
     if proc.returncode != 0:
-        log.warning("Last command: %s\n\tgenerate warnings with returncode %d." % (cmdline, proc.returncode))
+        log.warning( "Last command: %s\n\tgenerate warnings with returncode %d." %
+                     ( cmdline, proc.returncode ) )
         if output:
             log.warning( "Command output:\n" + output )
     else:
@@ -47,8 +48,8 @@ def exception_if_error(proc, cmdline="", outtest=None):
     if isinstance(cmdline, (list,tuple)):
         cmdline = " ".join(cmdline)
 
-    # use proc.communicate() instead of proc.wait() or read buffer before call proc.wait(),
-    # otherwize if buffer overflow, process will hang!
+    # use proc.communicate() instead of proc.wait() or read buffer before
+    # call proc.wait(), otherwize if buffer overflow, process will hang!
     output, error_output = proc.communicate()
     if error_output:
         output = output and output + "\n" + error_output or error_output
@@ -62,7 +63,8 @@ def exception_if_error(proc, cmdline="", outtest=None):
                 break
 
     if not success and proc.returncode != 0:
-        msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
+        msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (
+                    cmdline, proc.returncode )
         log.critical( msg )
         if output:
             log.critical( "Command output:\n" + output )
@@ -77,7 +79,8 @@ def get_exception(e):
     traceback = True
     if '__module__' in dir(e) and e.__module__.startswith("gistore"):
         traceback = False
-    return "Exception caught abort: %s" % exception_to_unicode(e, traceback=traceback)
+    return "Exception caught abort: %s" % exception_to_unicode(e,
+                                                traceback=traceback)
 
 
 # exception_to_unicode and to_unicode is borrowed from Trac.
