@@ -69,8 +69,10 @@ class SCM(AbstractSCM):
 
         commands = [ 
                     # git init command can not work with --work-tree arguments.
-                    [ "git", "init", "--bare", os.path.join( self.root,
-                                                             self.GIT_DIR) ],
+                    [ "git",
+                      "--git-dir=%s" % os.path.join( self.root, self.GIT_DIR ),
+                      "init",
+                      "--bare", ],
 
                     # a empty commit is used as root commit of rotate backup
                     self.get_command(work_tree=False) + [
