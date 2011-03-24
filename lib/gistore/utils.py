@@ -23,56 +23,48 @@ import logging
 log = logging.getLogger('gist.utils')
 
 
-def warn_if_error(proc, cmdline=""):
+def communicate(proc, cmdline="", input=None, exception=True, ignore=None):
     if isinstance(cmdline, (list,tuple)):
         cmdline = " ".join(cmdline)
 
     # use proc.communicate() instead of proc.wait() or read buffer before
     # call proc.wait(), otherwize if buffer overflow, process will hang!
-    output, error_output = proc.communicate()
-    if error_output:
-        output = output and output + "\n" + error_output or error_output
+    stdout, stderr = proc.communicate(input)
 
-    if proc.returncode != 0:
-        log.warning( "Last command: %s\n\tgenerate warnings with returncode %d." %
-                     ( cmdline, proc.returncode ) )
-        if output:
-            log.warning( "Command output:\n" + output )
-    else:
-        log.debug( "command: %s" % cmdline )
-        if output:
-            log.debug( "output:\n" + output )
-
-
-def exception_if_error(proc, cmdline="", outtest=None):
-    if isinstance(cmdline, (list,tuple)):
-        cmdline = " ".join(cmdline)
-
-    # use proc.communicate() instead of proc.wait() or read buffer before
-    # call proc.wait(), otherwize if buffer overflow, process will hang!
-    output, error_output = proc.communicate()
-    if error_output:
-        output = output and output + "\n" + error_output or error_output
-
-    success = False
-    if outtest is not None:
-        for line in output.splitlines():
-            if not success and outtest(line):
-                success = True
+    ignore_found = False
+    if ignore is not None:
+        for line in ((stdout or '') + (stdout and '\n') + (stderr or '')).splitlines():
+            if ignore(line):
+                ignore_found = True
                 log.debug( "Command not failed, matched line found: %s" % line )
                 break
 
-    if not success and proc.returncode != 0:
-        msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (
-                    cmdline, proc.returncode )
-        log.critical( msg )
-        if output:
-            log.critical( "Command output:\n" + output )
-        raise CommandError( msg )
+    if proc.returncode != 0 and not ignore_found:
+        msg = "Last command: %s\n\tgenerate %s with returncode %d!" % (
+                    cmdline,
+                    (exception and "ERRORS" or "WARNINGS"),
+                    proc.returncode )
+        if exception:
+            log.critical( msg )
+            if stdout:
+                log.critical( "Command output:\n" + stdout )
+            if stderr:
+                log.critical( "Command error output:\n" + stderr )
+            raise CommandError( msg )
+        else:
+            log.warning( msg )
+            if stdout:
+                log.warning( "Command output:\n" + stdout )
+            if stderr:
+                log.warning( "Command error output:\n" + stderr )
     else:
         log.debug("Command: %s" % cmdline)
-        if output:
-            log.debug( "Command output:\n" + output )
+        if stdout:
+            log.debug( "Command output:\n" + stdout )
+        if stderr:
+            log.debug( "Command error output:\n" + stderr )
+
+    return (stdout, stderr)
 
 
 def get_exception(e):

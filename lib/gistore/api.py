@@ -432,7 +432,7 @@ class Gistore(object):
                                   stdout=PIPE,
                                   stderr=STDOUT,
                                   close_fds=True )
-                exception_if_error(proc_mnt, args)
+                communicate(proc_mnt, args)
 
     def removedirs(self, target):
         target = os.path.realpath(target)
@@ -448,10 +448,11 @@ class Gistore(object):
     def umount(self):
         self.assert_no_lock("commit")
 
-        output = Popen( [ "mount" ],
+        proc = Popen( [ "mount" ],
                         stdout=PIPE,
                         stderr=STDOUT,
-                        close_fds=True ).communicate()[0]
+                        close_fds=True )
+        output = communicate(proc, "mount")[0]
         pattern = re.compile(r"^(.*) on (.*) type .*$")
         mount_root = os.path.realpath( os.path.join( self.root,
                                                      self.WORK_TREE ) )
@@ -471,9 +472,9 @@ class Gistore(object):
                                    stdout=PIPE,
                                    stderr=STDOUT,
                                    close_fds=True )
-                exception_if_error( proc_umnt,
-                                    args,
-                                    lambda n: n.endswith("not mounted") )
+                communicate( proc_umnt,
+                             args,
+                             ignore=lambda n: n.endswith("not mounted") )
             except:
                 args = self.cmd_umount_force + [ target ]
                 proc_umnt = Popen( args,
@@ -486,9 +487,9 @@ class Gistore(object):
                                    stdout=PIPE,
                                    stderr=STDOUT,
                                    close_fds=True )
-                exception_if_error( proc_umnt,
-                                    args,
-                                    lambda n: n.endswith("not mounted") )
+                communicate( proc_umnt,
+                             args,
+                             ignore=lambda n: n.endswith("not mounted") )
 
         for target, src in sorted( mount_list, reverse=True ):
             log.debug("remove %s" % target)
