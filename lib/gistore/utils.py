@@ -23,7 +23,7 @@ import logging
 log = logging.getLogger('gist.utils')
 
 
-def communicate(proc, cmdline="", input=None, exception=True, ignore=None):
+def communicate(proc, cmdline="", input=None, exception=True, ignore=None, verbose=True):
     if isinstance(cmdline, (list,tuple)):
         cmdline = " ".join(cmdline)
 
@@ -44,19 +44,22 @@ def communicate(proc, cmdline="", input=None, exception=True, ignore=None):
                     cmdline,
                     (exception and "ERRORS" or "WARNINGS"),
                     proc.returncode )
-        if exception:
-            log.critical( msg )
-            if stdout:
-                log.critical( "Command output:\n" + stdout )
-            if stderr:
-                log.critical( "Command error output:\n" + stderr )
-            raise CommandError( msg )
+        if verbose:
+            if exception:
+                loglevel=logging.CRITICAL
+            else:
+                loglevel=logging.WARNING
         else:
-            log.warning( msg )
-            if stdout:
-                log.warning( "Command output:\n" + stdout )
-            if stderr:
-                log.warning( "Command error output:\n" + stderr )
+            loglevel=logging.DEBUG
+
+        log.log( loglevel, msg )
+        if stdout:
+            log.log( loglevel, "Command output:\n" + stdout )
+        if stderr:
+            log.log( loglevel, "Command error output:\n" + stderr )
+
+        if exception:
+            raise CommandError( msg )
     else:
         log.debug("Command: %s" % cmdline)
         if stdout:

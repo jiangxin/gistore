@@ -34,19 +34,23 @@ class Gistore(object):
         self.root = None
         self.scm = None
 
-        self.cmd_mount = ["mount", "--rbind"]
-        self.cmd_umount = ["umount"]
-        self.cmd_umount_force = ["umount", "-f", "-l"]
+        if os.system("which bindfs >/dev/null 2>&1") == 0:
+            self.cmd_mount = ["bindfs", "-n"]
+        else:
+            self.cmd_mount = ["mount", "--rbind"]
 
-        # Users other than root, may use other painless command
+        if os.system("which fusermount >/dev/null 2>&1") == 0:
+            self.cmd_umount = ["fusermount","-u"]
+        else:
+            self.cmd_umount = ["umount"]
+
+        self.cmd_umount_force = ["umount", "-f"]
+
+        # Users other than root, try sudo.
+        self.try_sudo = False
         if os.getuid() != 0:
-            self.cmd_umount_force.insert(0, "sudo")
-            if os.system("which bindfs >/dev/null 2>&1") == 0:
-                self.cmd_mount = ["bindfs"]
-                self.cmd_umount = ["fusermount","-u"]
-            elif os.system("which sudo >/dev/null 2>&1") == 0:
-                self.cmd_mount.insert(0, "sudo")
-                self.cmd_umount.insert(0, "sudo")
+            if os.system("which sudo >/dev/null 2>&1") == 0:
+                self.try_sudo = True
 
         self.__init_task(task, create)
 
@@ -427,11 +431,32 @@ class Gistore(object):
             if self.is_mount(p, target):
                 log.warning("%s is already mounted." % target)
             else:
-                args = self.cmd_mount + [p, target]
-                proc_mnt = Popen( self.cmd_mount + [p, target],
-                                  stdout=PIPE,
-                                  stderr=STDOUT )
-                communicate(proc_mnt, args)
+                commands = [ self.cmd_mount + [p, target], ]
+                if self.try_sudo:
+                    commands += [ ["sudo"] + commands[0] ]
+                mounted = False
+                for command in commands:
+                    proc_mnt = Popen( command,
+                                      stdout=PIPE,
+                                      stderr=STDOUT )
+                    try:
+                        (stdout, stderr) = communicate(proc_mnt, command, verbose=False)
+                    except:
+                        mounted = False
+                    else:
+                        mounted = True
+                        break
+                if not mounted:
+                    msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (
+                                " ".join(command),
+                                proc_mnt.returncode )
+                    log.critical( msg )
+                    if stdout:
+                        log.warning( "Command output:\n" + stdout )
+                    if stderr:
+                        log.warning( "Command error output:\n" + stderr )
+ 
+                    raise CommandError( msg )
 
     def removedirs(self, target):
         target = os.path.realpath(target)
@@ -464,27 +489,40 @@ class Gistore(object):
                     mount_list.append( (target, src, ) )
 
         for target, src in sorted( mount_list, reverse=True ):
-            try:
-                args = self.cmd_umount + [ target ]
-                proc_umnt = Popen( args,
-                                   stdout=PIPE,
-                                   stderr=STDOUT )
-                communicate( proc_umnt,
-                             args,
-                             ignore=lambda n: n.endswith("not mounted") )
-            except:
-                args = self.cmd_umount_force + [ target ]
-                proc_umnt = Popen( args,
-                                   stdout=PIPE,
-                                   stderr=STDOUT )
+            commands = [ self.cmd_umount + [ target ], ]
+            if self.try_sudo:
+                commands += [ ["sudo"] + commands[0] ]
+            commands += [ self.cmd_umount_force + [ target ] ]
+            if self.try_sudo:
+                commands += [ ["sudo"] + commands[-1] ]
 
-                args = self.cmd_umount_force + [ target ]
-                proc_umnt = Popen( args,
+            umounted = False
+            for command in commands:
+                proc_umnt = Popen( command,
                                    stdout=PIPE,
                                    stderr=STDOUT )
-                communicate( proc_umnt,
-                             args,
-                             ignore=lambda n: n.endswith("not mounted") )
+                try:
+                    (stdout, stderr) = communicate( proc_umnt,
+                                                    command,
+                                                    ignore=lambda n: n.endswith("not mounted"),
+                                                    verbose=False )
+                except:
+                    umounted = False
+                else:
+                    umounted = True
+                    break
+
+            if not umounted:
+                msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (
+                            " ".join(command),
+                            proc_umnt.returncode )
+                log.critical( msg )
+                if stdout:
+                    log.warning( "Command output:\n" + stdout )
+                if stderr:
+                    log.warning( "Command error output:\n" + stderr )
+
+                raise CommandError( msg )
 
         for target, src in sorted( mount_list, reverse=True ):
             log.debug("remove %s" % target)
