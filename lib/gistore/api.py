@@ -485,7 +485,7 @@ class Gistore(object):
                         stdout=PIPE,
                         stderr=STDOUT )
         output = communicate(proc, "mount")[0]
-        pattern = re.compile(r"^(.*) on (.*) type .*$")
+        pattern = re.compile(r"^(.*) on (.*) (type |\().*$")
         mount_root = os.path.realpath( os.path.join( self.root,
                                                      self.WORK_TREE ) )
         mount_list = []
