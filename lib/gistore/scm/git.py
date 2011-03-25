@@ -74,17 +74,6 @@ class SCM(AbstractSCM):
                       "init",
                       "--bare", ],
 
-                    # a empty commit is used as root commit of rotate backup
-                    self.get_command(work_tree=False) + [
-                        "--work-tree=/tmp",
-                        "commit",
-                        "--allow-empty",
-                        "-m",
-                        "gistore root commit initialized." ],
-
-                    # tag the empty commit as gistore/0, never delete it.
-                    self.get_command(work_tree=False) + [ "tag", "gistore/0" ],
-
                     # set local git config, which not affect by global config
                     self.get_command(work_tree=False) + [
                         "config", "core.autocrlf", "false" ],
@@ -107,8 +96,7 @@ class SCM(AbstractSCM):
         for args in commands:
             proc = subprocess.Popen( args,
                                      stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT,
-                                     close_fds=True )
+                                     stderr=subprocess.STDOUT )
             communicate(proc, args)
 
         #log.debug("create .gitignore")
@@ -128,52 +116,7 @@ class SCM(AbstractSCM):
             if os.path.exists( oldgit ):
                 os.rename( oldgit, os.path.join(self.root, self.GIT_DIR) )
 
-        commands = []
-        args = self.get_command(work_tree=False) + [ "show-ref" ]
-        returncode = subprocess.call( args=args,
-                                      stdout=sys.stderr,
-                                      close_fds=True )
-        # repo.git has no commit yet
-        if returncode != 0:
-            commands += [
-                          # a empty commit is used as root commit of rotate backup
-                          self.get_command(work_tree=False) + [
-                                "--work-tree=/tmp",
-                                "commit",
-                                "--allow-empty",
-                                "-m",
-                                "gistore root commit initialized." ],
-
-                          # tag the empty commit as gistore/0, never delete it.
-                          self.get_command(work_tree=False) + [
-                                "tag", "gistore/0" ],
-                         ]
-        else:
-            commands += [
-                          # switch to a unexist ref
-                          self.get_command(work_tree=False) + [
-                                "symbolic-ref", "HEAD", "refs/tags/gistore/0" ],
-
-                          # remove cached index
-                          self.get_command(work_tree=False) + [
-                                "rm", "--cached", "-r", "-f", "-q", "." ],
-
-                          # a empty commit is used as root commit of rotate backup
-                          self.get_command(work_tree=False) + [
-                                "--work-tree=/tmp",
-                                "commit",
-                                "--allow-empty",
-                                "-m",
-                                "gistore root commit initialized." ],
-
-                          # switch to master
-                          self.get_command(work_tree=False) + [
-                                "symbolic-ref", "HEAD", "refs/heads/master" ],
-                          self.get_command(work_tree=False) + [
-                                "--work-tree=/tmp", "reset", "HEAD" ],
-                         ]
-
-        commands +=[ 
+        commands = [ 
                     # set as bare repos
                     self.get_command(work_tree=False) + [
                             "config", "core.bare", "true" ],
@@ -200,8 +143,7 @@ class SCM(AbstractSCM):
         for args in commands:
             proc = subprocess.Popen( args,
                                      stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT,
-                                     close_fds=True)
+                                     stderr=subprocess.STDOUT )
             communicate(proc, args)
 
 
@@ -210,20 +152,14 @@ class SCM(AbstractSCM):
         log.debug(" ".join(args))
         proc = subprocess.Popen( args,
                                  stdout=subprocess.PIPE,
-                                 stderr=None,
-                                 close_fds=True )
-        lines = communicate(proc, args)[0].splitlines()
-        if proc.returncode != 0:
-            msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
-            log.critical( msg )
-            if lines:
-                log.critical( "Command output:\n" + ''.join(lines))
-            raise CommandError( msg )
-
+                                 stderr=open('/dev/null', 'w') )
+        lines = communicate( proc,
+                             args,
+                             exception=False,
+                            )[0].splitlines()
         log.debug( "Total %d commits in master." % len(lines) )
 
-        # the very first commit is a blank commit, nothing in it.
-        return len(lines) - 1
+        return len(lines)
 
 
     def backup_rotate(self):
@@ -233,27 +169,19 @@ class SCM(AbstractSCM):
             return
 
         count = self._get_commit_count()
-        # the first commit is a blank commit
-        if count < self.backup_history:
-            log.debug( "No backup rotate needed. %d < %d." % 
+        if count <= self.backup_history:
+            log.debug( "No backup rotate needed. %d <= %d." % 
                         ( count, self.backup_history ) )
             return
 
-        log.info( "Begin backup rotate, for %d >= %d." %
+        log.info( "Begin backup rotate, for %d > %d." %
                     ( count, self.backup_history ) )
         # list branches with prefix: gistore/
         args = self.get_command(work_tree=False) + [ "branch" ]
         proc = subprocess.Popen( args,
                                  stdout=subprocess.PIPE,
-                                 stderr=None,
-                                 close_fds=True )
+                                 stderr=None )
         lines = sorted( communicate(proc, args)[0].splitlines() )
-        if proc.returncode != 0:
-            msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (cmdline, proc.returncode)
-            log.critical( msg )
-            if lines:
-                log.critical( "Command output:\n" + ''.join(lines) )
-            raise CommandError( msg )
         tagids = []
         for tag in lines:
             tag=tag.strip()
@@ -300,8 +228,7 @@ class SCM(AbstractSCM):
             log.debug( "Backup rotate step %d" % i )
             proc = subprocess.Popen( command_list[i],
                                      stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT,
-                                     close_fds=True )
+                                     stderr=subprocess.STDOUT )
             communicate(proc, command_list[i])
 
         # Run: git cat-file commit master | \
@@ -396,16 +323,14 @@ class SCM(AbstractSCM):
                                                   '.gistore-submodule' ) ]
             proc_add = subprocess.Popen( args,
                                          stdout=subprocess.PIPE,
-                                         stderr=subprocess.STDOUT,
-                                         close_fds=True)
+                                         stderr=subprocess.STDOUT )
             communicate(proc_add, args)
 
             # git add whole submodule dir
             args = self.command + [ "add", submodule ]
             proc_add = subprocess.Popen( args,
                                          stdout=subprocess.PIPE,
-                                         stderr=subprocess.STDOUT,
-                                         close_fds=True )
+                                         stderr=subprocess.STDOUT )
             communicate(proc_add, args)
 
             # git rm -f tmp file in submodule
@@ -415,8 +340,7 @@ class SCM(AbstractSCM):
                                                   '.gistore-submodule' ) ]
             proc_rm = subprocess.Popen( args,
                                         stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT,
-                                        close_fds=True )
+                                        stderr=subprocess.STDOUT )
             communicate(proc_rm, args)
 
             # check status --porcelain and append to status[]
@@ -424,8 +348,7 @@ class SCM(AbstractSCM):
             log.debug(" ".join(args))
             proc_st = subprocess.Popen( args,
                                         stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT,
-                                        close_fds=True )
+                                        stderr=subprocess.STDOUT )
             status.extend( [ line for line in
                              communicate(proc_st, args)[0].splitlines() ] )
             return status
@@ -440,8 +363,7 @@ class SCM(AbstractSCM):
         args = self.command + [ "add", "." ]
         proc_add = subprocess.Popen( args,
                                      stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT,
-                                     close_fds=True )
+                                     stderr=subprocess.STDOUT )
         communicate(proc_add, args)
 
         # delete files but keep directories.
@@ -450,8 +372,7 @@ class SCM(AbstractSCM):
             log.debug(" ".join(args))
             proc_ls = subprocess.Popen( args,
                                         stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT,
-                                        close_fds=True )
+                                        stderr=subprocess.STDOUT )
             deleted_files = []
             for file in communicate(proc_ls, args)[0].splitlines():
                 deleted_files.append(file)
@@ -463,8 +384,7 @@ class SCM(AbstractSCM):
                             deleted_files
                     proc_rm = subprocess.Popen( args,
                                                 stdout=subprocess.PIPE,
-                                                stderr=subprocess.STDOUT,
-                                                close_fds=True)
+                                                stderr=subprocess.STDOUT )
                     communicate(proc_rm, args, exception=False)
                 except OSError, e:
                     if "Argument list too long" in e:
@@ -474,16 +394,14 @@ class SCM(AbstractSCM):
                             proc_rm = subprocess.Popen(
                                                 args,
                                                 stdout=subprocess.PIPE,
-                                                stderr=subprocess.STDOUT,
-                                                close_fds=True )
+                                                stderr=subprocess.STDOUT )
                             communicate(proc_rm, args, exception=False)
 
         args = self.command + [ "status", "--porcelain" ]
         log.debug(" ".join(args))
         proc_st = subprocess.Popen( args,
                                     stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                    close_fds=True)
+                                    stderr=subprocess.STDOUT )
         commit_stat = [ line for line in communicate(proc_st, args)[0].splitlines() ]
 
         submodules = self.remove_submodules()
@@ -514,8 +432,7 @@ class SCM(AbstractSCM):
         args = self.command + [ "commit", "--quiet", "-F", msgfile ]
         proc_ci = subprocess.Popen( args,
                                     stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT,
-                                    close_fds=True )
+                                    stderr=subprocess.STDOUT )
         # If nothing to commit, git commit return 1.
         communicate( proc_ci,
                      args,
@@ -529,8 +446,7 @@ class SCM(AbstractSCM):
                     "--work-tree=.", "submodule", "status" ]
         proc = subprocess.Popen( args,
                                  stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 close_fds=True )
+                                 stderr=subprocess.STDOUT )
         pat1 = re.compile(r".\w{40} (\w*) \(.*\)?")
         pat2 = re.compile(r"No submodule mapping found in .gitmodules for path '(.*)'")
         for line in communicate(proc, args)[0].splitlines():
@@ -549,8 +465,7 @@ class SCM(AbstractSCM):
                         "rm", "--cached", "-q" ] + submodules
             proc_rm = subprocess.Popen( args,
                                         stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT,
-                                        close_fds=True)
+                                        stderr=subprocess.STDOUT )
             communicate(proc_rm, args)
 
             # maybe other submodules

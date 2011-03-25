@@ -74,8 +74,7 @@ DEFAULT_BACKUPS = []
 #import subprocess
 #proc = subprocess.Popen(
 #           ['python', '/opt/ossxp/bin/ossxp_pkgadmin.py', 'list_backup'],
-#           stdout=subprocess.PIPE, stderr=open('/dev/null', 'w'),
-#           close_fds=True )
+#           stdout=subprocess.PIPE, stderr=open('/dev/null', 'w') )
 #for line in proc.communicate()[0].splitlines():
 #    DEFAULT_BACKUPS.append(line.strip())
 

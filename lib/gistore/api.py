@@ -430,8 +430,7 @@ class Gistore(object):
                 args = self.cmd_mount + [p, target]
                 proc_mnt = Popen( self.cmd_mount + [p, target],
                                   stdout=PIPE,
-                                  stderr=STDOUT,
-                                  close_fds=True )
+                                  stderr=STDOUT )
                 communicate(proc_mnt, args)
 
     def removedirs(self, target):
@@ -450,8 +449,7 @@ class Gistore(object):
 
         proc = Popen( [ "mount" ],
                         stdout=PIPE,
-                        stderr=STDOUT,
-                        close_fds=True )
+                        stderr=STDOUT )
         output = communicate(proc, "mount")[0]
         pattern = re.compile(r"^(.*) on (.*) type .*$")
         mount_root = os.path.realpath( os.path.join( self.root,
@@ -470,8 +468,7 @@ class Gistore(object):
                 args = self.cmd_umount + [ target ]
                 proc_umnt = Popen( args,
                                    stdout=PIPE,
-                                   stderr=STDOUT,
-                                   close_fds=True )
+                                   stderr=STDOUT )
                 communicate( proc_umnt,
                              args,
                              ignore=lambda n: n.endswith("not mounted") )
@@ -479,14 +476,12 @@ class Gistore(object):
                 args = self.cmd_umount_force + [ target ]
                 proc_umnt = Popen( args,
                                    stdout=PIPE,
-                                   stderr=STDOUT,
-                                   close_fds=True )
+                                   stderr=STDOUT )
 
                 args = self.cmd_umount_force + [ target ]
                 proc_umnt = Popen( args,
                                    stdout=PIPE,
-                                   stderr=STDOUT,
-                                   close_fds=True )
+                                   stderr=STDOUT )
                 communicate( proc_umnt,
                              args,
                              ignore=lambda n: n.endswith("not mounted") )
