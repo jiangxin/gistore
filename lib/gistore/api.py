@@ -34,23 +34,33 @@ class Gistore(object):
         self.root = None
         self.scm = None
 
-        if os.system("which bindfs >/dev/null 2>&1") == 0:
-            self.cmd_mount = ["bindfs", "-n"]
-        else:
-            self.cmd_mount = ["mount", "--rbind"]
-
-        if os.system("which fusermount >/dev/null 2>&1") == 0:
-            self.cmd_umount = ["fusermount","-u"]
-        else:
-            self.cmd_umount = ["umount"]
-
-        self.cmd_umount_force = ["umount", "-f"]
-
         # Users other than root, try sudo.
         self.try_sudo = False
         if os.getuid() != 0:
             if os.system("which sudo >/dev/null 2>&1") == 0:
                 self.try_sudo = True
+
+        self.cmd_mount = []
+        self.cmd_umount = []
+        if os.system("which bindfs >/dev/null 2>&1") == 0:
+            self.cmd_mount.append( ["bindfs", "-n"] )
+            if self.try_sudo:
+                # If use -n here, user cannot read the mounting file systems.
+                self.cmd_mount.append( ["sudo", "bindfs"] )
+        self.cmd_mount.append( ["mount", "--rbind"] )
+        if self.try_sudo:
+            self.cmd_mount.append( ["sudo", "mount", "--rbind"] )
+
+        if os.system("which fusermount >/dev/null 2>&1") == 0:
+            self.cmd_umount.append( ["fusermount","-u"] )
+            if self.try_sudo:
+                self.cmd_umount.append( ["sudo", "fusermount","-u"] )
+        self.cmd_umount.append( ["umount"] )
+        if self.try_sudo:
+            self.cmd_umount.append( ["sudo", "umount"] )
+        self.cmd_umount.append( ["umount", "-f"] )
+        if self.try_sudo:
+            self.cmd_umount.append( ["sudo", "umount", "-f"] )
 
         self.__init_task(task, create)
 
@@ -431,16 +441,15 @@ class Gistore(object):
             if self.is_mount(p, target):
                 log.warning("%s is already mounted." % target)
             else:
-                commands = [ self.cmd_mount + [p, target], ]
-                if self.try_sudo:
-                    commands += [ ["sudo"] + commands[0] ]
                 mounted = False
-                for command in commands:
-                    proc_mnt = Popen( command,
+                for command in self.cmd_mount:
+                    proc_mnt = Popen( command + [ p, target ],
                                       stdout=PIPE,
                                       stderr=STDOUT )
                     try:
-                        (stdout, stderr) = communicate(proc_mnt, command, verbose=False)
+                        (stdout, stderr) = communicate( proc_mnt,
+                                                        command + [ p, target ],
+                                                        verbose=False )
                     except:
                         mounted = False
                     else:
@@ -448,7 +457,7 @@ class Gistore(object):
                         break
                 if not mounted:
                     msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (
-                                " ".join(command),
+                                " ".join(command+ [ p, target ]),
                                 proc_mnt.returncode )
                     log.critical( msg )
                     if stdout:
@@ -489,21 +498,14 @@ class Gistore(object):
                     mount_list.append( (target, src, ) )
 
         for target, src in sorted( mount_list, reverse=True ):
-            commands = [ self.cmd_umount + [ target ], ]
-            if self.try_sudo:
-                commands += [ ["sudo"] + commands[0] ]
-            commands += [ self.cmd_umount_force + [ target ] ]
-            if self.try_sudo:
-                commands += [ ["sudo"] + commands[-1] ]
-
             umounted = False
-            for command in commands:
-                proc_umnt = Popen( command,
+            for command in self.cmd_umount:
+                proc_umnt = Popen( command + [ target ],
                                    stdout=PIPE,
                                    stderr=STDOUT )
                 try:
                     (stdout, stderr) = communicate( proc_umnt,
-                                                    command,
+                                                    command + [ target ],
                                                     ignore=lambda n: n.endswith("not mounted"),
                                                     verbose=False )
                 except:
@@ -514,7 +516,7 @@ class Gistore(object):
 
             if not umounted:
                 msg = "Last command: %s\n\tgenerate ERRORS with returncode %d!" % (
-                            " ".join(command),
+                            " ".join(command + [ target ]),
                             proc_umnt.returncode )
                 log.critical( msg )
                 if stdout:
