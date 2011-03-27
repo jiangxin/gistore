@@ -38,7 +38,7 @@ Options:
 
 Available command:
     list
-        List tasks linked to $HOME/.gistore/tasks or
+        List tasks linked to $HOME/.gistore.d/tasks or
         /etc/gistore/tasks/ for root user.
 
     status [task or direcotry]
