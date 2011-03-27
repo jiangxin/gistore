@@ -81,7 +81,7 @@ class Gistore(object):
               not taskname.startswith('../') and
               taskname != '.' and
               taskname != '..'):
-            path = os.path.join(cfg.sys_config_dir, "tasks", taskname)
+            path = os.path.join(cfg.tasks_dir, taskname)
             if os.path.exists(path):
                 taskname = path
             else:
@@ -384,13 +384,12 @@ class Gistore(object):
         return stat1.st_ino == stat2.st_ino or os.path.ismount(dest)
 
     def task2dir(self, task):
-        return os.path.realpath(os.path.join(cfg.sys_config_dir, 'tasks', task))
+        return os.path.realpath(os.path.join(cfg.tasks_dir, task))
 
     def dir2task(self, path):
-        tasksdir = os.path.join(cfg.sys_config_dir, 'tasks')
-        if os.path.exists(tasksdir):
-            for t in os.listdir(tasksdir):
-                if os.path.realpath(os.path.join(tasksdir, t)) == os.path.realpath(path):
+        if os.path.exists(cfg.tasks_dir):
+            for t in os.listdir(cfg.tasks_dir):
+                if os.path.realpath(os.path.join(cfg.tasks_dir, t)) == os.path.realpath(path):
                     return t
         return None
 

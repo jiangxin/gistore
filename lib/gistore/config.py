@@ -23,7 +23,12 @@ GISTORE_LOG_DIR     = "logs"
 GISTORE_LOCK_DIR    = "locks"
 
 class DefaultConfig(object):
-    sys_config_dir = os.environ.get('GISTORE_ETC') or '/etc/gistore'
+    if os.getuid() != 0:
+        sys_config_dir = os.path.expanduser('~/.gistore.d/etc')
+        tasks_dir = os.path.expanduser('~/.gistore.d/tasks')
+    else:
+        sys_config_dir = '/etc/gistore'
+        tasks_dir = '/etc/gistore/tasks'
     backend = "git"
     root_only = False
     log_level = logging.INFO
@@ -33,12 +38,11 @@ class DefaultConfig(object):
     store_list = {'default': None }
 
 def initConfig():
-    task_dir = os.path.join(DefaultConfig.sys_config_dir, 'tasks')
-    if not os.path.exists(task_dir):
+    if not os.path.exists(DefaultConfig.tasks_dir):
         try:
-            os.makedirs(task_dir)
+            os.makedirs(DefaultConfig.tasks_dir)
         except OSError:
-            print >> sys.stderr, "no permisson to create dir: %s" % task_dir
+            print >> sys.stderr, "no permisson to create dir: %s" % DefaultConfig.tasks_dir
             return
 
     config_file = os.path.join(DefaultConfig.sys_config_dir, 'local_config.py')

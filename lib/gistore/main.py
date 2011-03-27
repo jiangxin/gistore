@@ -140,12 +140,11 @@ class GistoreCmd(object):
     def do_list(args=[]):
         if not args:
             print "Task list:"
-            tasksdir = os.path.join(cfg.sys_config_dir, 'tasks')
-            if os.path.exists(tasksdir):
-                for t in sorted(os.listdir(tasksdir)):
+            if os.path.exists(cfg.tasks_dir):
+                for t in sorted(os.listdir(cfg.tasks_dir)):
                     if t.startswith("."):
                         continue
-                    dest = os.path.realpath(os.path.join(tasksdir,t))
+                    dest = os.path.realpath(os.path.join(cfg.tasks_dir,t))
                     print "    %-10s: %s" % (t, dest)
         else:
             GistoreCmd.do_status(args)
@@ -188,12 +187,11 @@ class GistoreCmd(object):
     @staticmethod
     def do_commit_all(args=[]):
         tasks = []
-        tasksdir = os.path.join(cfg.sys_config_dir, 'tasks')
-        if os.path.exists(tasksdir):
-            for t in sorted(os.listdir(tasksdir)):
+        if os.path.exists(cfg.tasks_dir):
+            for t in sorted(os.listdir(cfg.tasks_dir)):
                 if t.startswith("."):
                     continue
-                tasks.append(os.path.realpath(os.path.join(tasksdir,t)))
+                tasks.append(os.path.realpath(os.path.join(cfg.tasks_dir,t)))
         if tasks:
             GistoreCmd.do_commit(tasks)
 
