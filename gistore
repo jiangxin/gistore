@@ -20,7 +20,7 @@
 import sys
 import os
 
-libpath = os.path.join( os.path.dirname(__file__), 'lib' )
+libpath = os.path.join( os.path.dirname(os.path.realpath(__file__)), 'lib' )
 if os.path.exists( os.path.join( libpath, 'gistore' ) ):
     sys.path.insert( 0, os.path.realpath(libpath) )
 
