@@ -91,11 +91,10 @@ class Gistore(object):
         self.root = os.path.realpath(taskname)
 
         if create:
-            if os.path.exists( self.root ):
-                raise TaskAlreadyExistsError( "Task already exists in: %s." % (
-                                              self.root) )
-            else:
-                os.makedirs( os.path.join(self.root, GISTORE_CONFIG_DIR) )
+            if ( os.path.exists( self.root ) and
+                 len ( os.listdir(self.root) ) > 0 ):
+                raise TaskAlreadyExistsError(
+                            "Not a empty directory: %s" % ( self.root) )
         elif not os.path.exists( os.path.join( self.root,
                                                GISTORE_CONFIG_DIR,
                                                "config") ):
@@ -106,7 +105,8 @@ class Gistore(object):
 
         # Create needed directories
         check_dirs = [ os.path.join( self.root, GISTORE_LOG_DIR ),
-                       os.path.join( self.root, GISTORE_LOCK_DIR ),]
+                       os.path.join( self.root, GISTORE_LOCK_DIR ),
+                       os.path.join( self.root, GISTORE_CONFIG_DIR ) ]
         for dir in check_dirs:
             if not os.path.exists( dir ):
                 os.makedirs( dir )
