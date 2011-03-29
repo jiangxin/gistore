@@ -221,9 +221,11 @@ class SCM(AbstractSCM):
             if len(tagids) > 0:
                 cmd = self.get_command(work_tree=False) + [
                         "branch", "gistore/%d" % (tagids[-1] + 1), "master" ]
+                tagids.append( tagids[-1] + 1 )
             else:
                 cmd = self.get_command(work_tree=False) + [
                         "branch", "gistore/1", "master" ]
+                tagids.append( 1 )
             command_list.append(cmd)
 
         for i in range(len(command_list)):
@@ -269,6 +271,26 @@ class SCM(AbstractSCM):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE )
         communicate(proc, cmd)
+
+        # create file .git/info/grafts.
+        #   parent of object_id -> gistore/N^
+        #   paretn of gistore/N last commit -> gistore/(N-1)^
+        grafts = []
+        id = object_id
+        for i in sorted(tagids[:self.backup_copies], reverse=True):
+            cmd = self.get_command(work_tree=False) + [
+                                    'rev-list',
+                                    'refs/heads/gistore/%d' % i ]
+            proc = subprocess.Popen( cmd,
+                                    stdout=subprocess.PIPE,
+                                    stderr=None )
+            revlist = communicate(proc, cmd)[0].splitlines()
+            grafts.append( [ id, revlist[1] ] )
+            id = revlist[-1]
+        f = open( os.path.join( self.root, self.GIT_DIR, 'info/grafts'), 'w' )
+        for id, parent in grafts:
+            f.write( "%s %s\n" % (id, parent) )
+        f.close()
 
 
     def commit(self, message=None):
