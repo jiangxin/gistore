@@ -56,6 +56,13 @@ Available command:
 
     commit-all
         Commit changes in all backup tasks under /etc/gistore/tasks/
+
+    add path, ...
+        Add backup items.
+
+    rm path, ...
+        Remove backup items.
+
 '''
 
 import os
