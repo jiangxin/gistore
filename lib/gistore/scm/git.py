@@ -40,6 +40,8 @@ class SCM(AbstractSCM):
         os.putenv( "GIT_COMMITTER_NAME", self.username )
         os.putenv( "GIT_COMMITTER_EMAIL",
                    self.username+"@"+socket.gethostname() )
+        # Not affect by info/grafts
+        os.putenv( "GIT_GRAFT_FILE", "info/grafts-%s-tmp" % os.getpid() )
         self.GIT_DIR = "repo.git"
 
     def get_command( self, git_dir=True, work_tree=True ):
