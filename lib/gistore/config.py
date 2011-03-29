@@ -30,11 +30,13 @@ class DefaultConfig(object):
         sys_config_dir = '/etc/gistore'
         tasks_dir = '/etc/gistore/tasks'
     backend = "git"
+    backuphistory = 200
+
     root_only = False
     log_level = logging.INFO
     task = None
-    backup_history = 200
-    backup_copies  = 5
+    backuphistory = 200
+    backupcopies  = 5
     store_list = {'default': None }
 
 def initConfig():

@@ -21,10 +21,11 @@ from subprocess import Popen, PIPE, STDOUT
 from copy import deepcopy
 import logging
 
-from gistore.utils  import *
-from gistore.config import *
-from gistore.errors import *
-from gistore        import versions
+from gistore.utils          import *
+from gistore.config         import *
+from gistore.repo_config    import RepoConfig
+from gistore.errors         import *
+from gistore                import versions
 
 log = logging.getLogger('gist.api')
 
@@ -94,7 +95,7 @@ class Gistore(object):
                 raise TaskAlreadyExistsError( "Task already exists in: %s." % (
                                               self.root) )
             else:
-                os.makedirs(self.root)
+                os.makedirs( os.path.join(self.root, GISTORE_CONFIG_DIR) )
         elif not os.path.exists( os.path.join( self.root,
                                                GISTORE_CONFIG_DIR,
                                                "config") ):
@@ -129,15 +130,15 @@ class Gistore(object):
         self.taskname = self.dir2task(self.root)
 
         # Initail self.store_list from .gistore/config file.
-        self.repo_cfg = self.parse_config()
-        old_version = self.repo_cfg["main.version"]
+        self.parse_config()
+        old_version = int(self.rc.repo_cfg["main.version"])
 
         # Upgrade config file if needed.
         if old_version is not None and old_version != versions.GISTORE_VERSION:
-            self.upgrade(self.repo_cfg)
+            self.upgrade(old_version)
 
         # Scm backend initialized.
-        scm = __import__( "gistore.scm."+self.repo_cfg["main.backend"],
+        scm = __import__( "gistore.scm."+self.rc.repo_cfg["main.backend"],
                           globals(), {}, ["SCM"] )
         self.WORK_TREE = os.path.realpath(
                             os.path.join( self.runtime_dir,
@@ -146,8 +147,8 @@ class Gistore(object):
                                           str( os.getpid() ) ) )
         self.scm = scm.SCM(self.root,
                         work_tree=self.WORK_TREE,
-                        backup_history=self.repo_cfg["main.backup_history"],
-                        backup_copies=self.repo_cfg["main.backup_copies"])
+                        backup_history=self.rc.repo_cfg["main.backuphistory"],
+                        backup_copies=self.rc.repo_cfg["main.backupcopies"])
 
         # Upgrade scm if needed.
         if old_version is not None and old_version != versions.GISTORE_VERSION:
@@ -155,7 +156,7 @@ class Gistore(object):
 
         # Check uid
         if os.getuid() != 0:
-            if self.repo_cfg["main.root_only"]:
+            if self.rc.repo_cfg["main.rootonly"] == 'true':
                 raise PemissionDeniedError(
                     "Only root user allowed for task: %s" % (
                     self.taskname or self.root))
@@ -164,136 +165,31 @@ class Gistore(object):
 
     def init(self):
         self.scm.init()
-        repo_cfg = {
-                    "main.backend": cfg.backend,
-                    "main.root_only": cfg.root_only,
-                    "main.backup_history": cfg.backup_history,
-                    "main.backup_copies": cfg.backup_copies,
-                    "main.version": versions.GISTORE_VERSION,
-                    'default.keep_empty_dir': False,
-                    'default.keep_perm': False,
-                   }
-        self.save_config(repo_cfg)
+        self.rc.save()
 
 
-    def upgrade(self, gistore_config):
-        oldversion = gistore_config["main.version"]
+    def upgrade(self, oldversion):
         if oldversion == versions.GISTORE_VERSION:
             return
 
         if oldversion < 2:
             self.upgrade_2(gistore_config)
 
-        self.save_config(gistore_config)
-
 
     def upgrade_2(self, gistore_config):
-        gistore_config["main.version"] = 2
-
-
-    def save_config(self, gistore_config={}):
-        config_file = os.path.join(self.root, GISTORE_CONFIG_DIR, "config")
-        if not os.path.exists(config_file):
-            os.mkdir(os.path.dirname(config_file))
-
-        main_buffer = []
-        default_buffer = []
-        for key, val in sorted(gistore_config.iteritems()):
-            if key.startswith("default."):
-                default_buffer.append( "%s = %s" % (
-                         key[8:],
-                         isinstance(val, bool)
-                         and ( val and "yes" or "no")
-                         or val,
-                         ) )
-            elif key.startswith("main."):
-                main_buffer.append( "%s = %s" % (
-                         key[5:],
-                         isinstance(val, bool)
-                         and ( val and "yes" or "no")
-                         or val,
-                         ) )
-
-        store_buffer = []
-        for path in sorted(self.store_list.keys()):
-            if self.store_list[path].get('_system_', False):
-                continue
-            store_buffer.append( "[store %s]" % path )
-
-            for key, val in self.store_list[path].iteritems():
-                if gistore_config.get("default."+key, None) == val:
-                    continue
-
-                if isinstance(val, bool):
-                    store_buffer.append( "%(key)s = %(val)s" % {
-                            "key": key,
-                            "val": val and "yes" or "no",
-                            } )
-                else:
-                    store_buffer.append( key + " = " + val )
-            store_buffer.append( "" )
-
-
-
-        fp = open(config_file, "w")
-        fp.write("""# Global config for all sections
-[main]
-%(main)s
-
-[default]
-%(default)s
-
-# Define your backup list below. Section name begin with 'store ' will be backup.
-# eg: [store /etc]
-%(store)s
-""" %       {
-             'main':    "\n".join(main_buffer),
-             'default': "\n".join(default_buffer),
-             'store':   "\n".join(store_buffer),
-            }
-        )
-
-        fp.close()
+        self.rc.add("main.version", 2)
 
 
     def parse_config(self):
         """Initial self.store_list from cfg.store_list and .gistore/config file.
         """
-        assert self.root
-
-        repo_cfg = {
-                    "main.backend": cfg.backend,
-                    "main.root_only": cfg.root_only,
-                    "main.backup_history": cfg.backup_history,
-                    "main.backup_copies": cfg.backup_copies,
-                    "main.version": None,
-                    'default.keep_empty_dir': False,
-                    'default.keep_perm': False,
-                   }
-
-        def update_config(config1, list2, prefix=""):
-            config2 = {}
-            if list2:
-                for key, val in list2:
-                    config2[prefix + key] = val
-                    if val.lower() in ['0', 'f', 'false', 'n', 'no']:
-                        config2[prefix + key] = False
-                    elif val.lower() in ['1', 't', 'true', 'y', 'yes', 'ok']:
-                        config2[prefix + key] = True
-                config1.update(config2)
-
-        def get_default(config1):
-            config2 = {}
-            for key, val in config1.iteritems():
-                if not key.startswith("default."):
-                    continue
-                config2[key[8:]] = val
-            return config2
-
-        def validate_list(dir_list):
+        def validate_list(store_list):
             """Remove duplicate dirs.
             """
             targets = []
+            dir_list = filter( lambda n: not store_list[n].has_key('enabled') or
+                               store_list[n]['enabled'] in ['true', 'yes'],
+                               store_list.keys() )
             for p in sorted(map(os.path.realpath, dir_list)):
                 if os.path.exists(p):
                     # Remove duplicate path
@@ -322,54 +218,31 @@ class Gistore(object):
             return targets
 
         self.store_list = {}
-        dir_list = cfg.store_list.get(self.taskname, [])
+        store_list = {}
+
         config_file = os.path.join(self.root, GISTORE_CONFIG_DIR, "config")
-        if os.path.exists(config_file):
-            # backup .gistore config files
-            dir_list.append(os.path.join(self.root, GISTORE_CONFIG_DIR))
-            from ConfigParser import ConfigParser
-            cp=ConfigParser()
-            cp.read(config_file)
-            if cp.has_option('main', 'backend'):
-                repo_cfg["main.backend"] = cp.get( 'main', 'backend' )
-            if cp.has_option('main', 'root_only'):
-                repo_cfg["main.root_only"] = cp.getboolean( 'main',
-                                                            'root_only' )
-            if cp.has_option('main', 'backup_history'):
-                repo_cfg["main.backup_history"] = cp.getint( 'main',
-                                                             'backup_history' )
-            if cp.has_option('main', 'backup_copies'):
-                repo_cfg["main.backup_copies"] = cp.getint( 'main',
-                                                            'backup_copies' )
-            if cp.has_option('main', 'version'):
-                repo_cfg["main.version"] = cp.getint( 'main', 'version' )
-            else:
-                # old version, needs to upgrade
-                repo_cfg["main.version"] = 1
+        self.rc = RepoConfig( config_file )
 
-            if cp.has_section('default'):
-                update_config(repo_cfg, cp.items('default'), "default.")
+        dir_list = cfg.store_list.get(self.taskname, [])
+        # backup .gistore config files
+        dir_list.append(os.path.join(self.root, GISTORE_CONFIG_DIR))
 
-            for path in validate_list(dir_list):
-                self.store_list[path] = get_default(repo_cfg)
-                self.store_list[path]["_system_"] = True
+        for path in dir_list:
+            store_list[path] = self.rc.defaults.copy()
+            store_list[path]["system"] = 'true'
+            store_list[path]["enabled"] = 'true'
 
-            for section in filter( lambda n: n.startswith('store '),
-                                    cp.sections() ):
-                self.store_list[section[6:].strip()] = get_default(repo_cfg)
+        for rawkey in filter( lambda n: n.startswith('store.'), self.rc.repo_cfg.keys() ):
+            section, key = rawkey.rsplit('.', 1)
+            section = os.path.realpath(section[6:])
+            key = key.lower()
+            if not store_list.has_key( section ):
+                store_list[section] = self.rc.defaults.copy()
+            store_list[section][key] = self.rc.repo_cfg[rawkey]
 
-            for section in filter( lambda n: n.startswith('store '),
-                                   cp.sections() ):
-                path = os.path.realpath(section[6:].strip())
-                if path in self.store_list.keys():
-                    update_config(self.store_list[path], cp.items(section))
+        for path in validate_list(store_list):
+            self.store_list[path] = store_list[path]
 
-        else:
-            for path in validate_list(dir_list):
-                self.store_list[path] = get_default(repo_cfg)
-                self.store_list[path]["_system_"] = True
-
-        return repo_cfg
 
     def is_mount(self, src, dest):
         """Check whether src is mount on dest.
@@ -397,16 +270,16 @@ class Gistore(object):
         print "%18s : %s" % ("Task name",
                 self.taskname and self.taskname or "-")
         print "%18s : %s" % ("Directory", self.root)
-        print "%18s : %s" % ("Backend", self.repo_cfg["main.backend"])
-        print "%18s : %d commits * %d copies" %  ( "Backup capability",
-                self.repo_cfg["main.backup_history"],
-                self.repo_cfg["main.backup_copies"] )
+        print "%18s : %s" % ("Backend", self.rc.repo_cfg["main.backend"])
+        print "%18s : %s commits * %s copies" %  ( "Backup capability",
+                self.rc.repo_cfg["main.backuphistory"],
+                self.rc.repo_cfg["main.backupcopies"] )
         print "%18s :" % "Backup list"
         for k,v in sorted(self.store_list.iteritems()):
             print " " * 18 + "   %s (%s%s)" % (
                     k,
-                    v.get("keep_perm") and "A" or "-",
-                    v.get("keep_empty_dir") and "D" or "-")
+                    v.get("keepperm") == 'true' and "A" or "-",
+                    v.get("keepemptydir") == 'true' and "D" or "-")
 
     def __mnt_target(self, p):
         if os.path.realpath(p) == os.path.realpath( os.path.join( self.root,
@@ -597,5 +470,24 @@ class Gistore(object):
             os.unlink( lockfile )
         except OSError:
             pass
+
+    def add(self, args=[]):
+        for path in args:
+            key = "store.%s.enabled" % os.path.realpath(path)
+            self.rc.add(key, "true")
+
+
+    def rm(self, args=[]):
+        for path in args:
+            keys = [ "store.%s.enabled" % os.path.realpath(path) ]
+            if os.path.realpath(path) != path:
+                keys.append( "store.%s.enabled" % path )
+            for key in keys:
+                if self.rc.repo_cfg.has_key( key ):
+                    if self.rc.repo_cfg[ key ] == 'true':
+                        self.rc.add(key, 'false')
+                        break
+                self.rc.remove_section( key.rsplit('.',1)[0] )
+
 
 # vim: et ts=4 sw=4

@@ -165,6 +165,38 @@ class GistoreCmd(object):
 
 
     @staticmethod
+    def do_add(args=[]):
+        if not args:
+            args = [None]
+        if len(args) == 1:
+            repos = None
+        else:
+            repos = args[0]
+            args = args[1:]
+        try:
+            GistoreCmd.gistobj = Gistore(repos)
+            GistoreCmd.gistobj.add(args)
+        except Exception, e:
+            logging.critical( get_exception(e) )
+
+
+    @staticmethod
+    def do_rm(args=[]):
+        if not args:
+            args = [None]
+        if len(args) == 1:
+            repos = None
+        else:
+            repos = args[0]
+            args = args[1:]
+        try:
+            GistoreCmd.gistobj = Gistore(repos)
+            GistoreCmd.gistobj.rm(args)
+        except Exception, e:
+            logging.critical( get_exception(e) )
+
+
+    @staticmethod
     def do_umount(args=[]):
         if not args:
             args = [None]

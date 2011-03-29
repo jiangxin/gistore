@@ -23,8 +23,8 @@ class AbstractSCM(object):
 
     def __init__(self, root="", work_tree=".", backup_history=0, backup_copies=0):
         self.set_root(root)
-        self.backup_history = backup_history
-        self.backup_copies  = backup_copies
+        self.backup_history = int(backup_history)
+        self.backup_copies  = int(backup_copies)
         self.username = pwd.getpwuid(os.getuid())[0] or "gistore"
         self.WORK_TREE = work_tree
 
