@@ -43,9 +43,12 @@ class SCM(AbstractSCM):
         # Not affect by info/grafts
         os.putenv( "GIT_GRAFT_FILE", "info/grafts-%s-tmp" % os.getpid() )
         self.GIT_DIR = "repo.git"
+        args = [ 'which', 'git' ]
+        proc = subprocess.Popen( args, stdout=subprocess.PIPE, stderr=None )
+        self.gitcmd = communicate(proc, args)[0].strip()
 
     def get_command( self, git_dir=True, work_tree=True ):
-        args = [ "git" ]
+        args = [ self.gitcmd ]
         if git_dir:
             args.append( "--git-dir=%s" % os.path.join( self.root,
                                                         self.GIT_DIR) )
@@ -71,7 +74,7 @@ class SCM(AbstractSCM):
 
         commands = [ 
                     # git init command can not work with --work-tree arguments.
-                    [ "git",
+                    [ self.gitcmd,
                       "--git-dir=%s" % os.path.join( self.root, self.GIT_DIR ),
                       "init",
                       "--bare", ],
@@ -498,6 +501,14 @@ class SCM(AbstractSCM):
 
         else:
             return []
+
+
+    def log(self, args=[]):
+        graft_file = os.path.join( self.root, self.GIT_DIR, 'info/grafts')
+        os.putenv( "GIT_GRAFT_FILE", graft_file )
+        args = self.get_command(work_tree=False) + [
+                        "log" ] + args
+        os.execv( args[0], args )
 
 
 # vim: et ts=4 sw=4

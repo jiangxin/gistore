@@ -47,14 +47,14 @@ Available command:
     init   [task or directory]
         Initial gistore backup repository
 
-    commit [task or direcotry]
-        Commit changes in backup repository. The following command run 
+    commit [-m message] [task or direcotry ...]
+        Commit changes in backup repository. The following command run
         in order:
           * mount
           * commit
           * umount
 
-    commit-all
+    commit-all [-m message]
         Commit changes in all backup tasks under /etc/gistore/tasks/
 
     add path, ...
@@ -63,6 +63,8 @@ Available command:
     rm path, ...
         Remove backup items.
 
+    log [options...]
+        Show backup logs.
 '''
 
 import os
@@ -109,7 +111,6 @@ def get_log_level( level ):
 
 class GistoreCmd(object):
     opt_verbose = 4     # info
-    opt_message = None
 
     gistobj = None
 
@@ -232,18 +233,30 @@ class GistoreCmd(object):
                     continue
                 tasks.append(os.path.realpath(os.path.join(cfg.tasks_dir,t)))
         if tasks:
-            GistoreCmd.do_commit(tasks)
+            GistoreCmd.do_commit( args + tasks )
 
 
     @staticmethod
-    def do_commit(args=[]):
+    def do_commit(argv=[]):
+        commit_msg = None
+        try:
+            opts, args = getopt.getopt(
+                argv, "m:",
+                [ "message" ])
+        except getopt.error, msg:
+            return GistoreCmd.usage(1, msg)
+
+        for opt, arg in opts:
+            if opt in ('-m', '--message'):
+                commit_msg = arg
+
         if not args:
             args = [None]
         for repos in args:
             try:
                 GistoreCmd.gistobj = Gistore(repos)
                 GistoreCmd.gistobj.mount()
-                GistoreCmd.gistobj.commit( GistoreCmd.opt_message )
+                GistoreCmd.gistobj.commit( commit_msg )
                 GistoreCmd.gistobj.umount()
                 GistoreCmd.gistobj.post_check()
             except GistoreLockError, e:
@@ -257,6 +270,20 @@ class GistoreCmd(object):
                 # remove lock files...
                 GistoreCmd.cleanup()
                 continue
+
+
+    @staticmethod
+    def do_log(args=[]):
+        repos = None
+        if args and not args[0].startswith('-'):
+            repos = args[0]
+            args = args[1:]
+
+        try:
+            GistoreCmd.gistobj = Gistore(repos)
+            GistoreCmd.gistobj.log(args)
+        except Exception, e:
+            logging.critical( get_exception(e) )
 
 
     @staticmethod
@@ -292,7 +319,7 @@ class GistoreCmd(object):
         global cfg
         try:
             opts, args = getopt.getopt(
-                argv, "hvqm:",
+                argv, "hvq",
                 [ "help", "verbose", "quiet" ])
         except getopt.error, msg:
             return GistoreCmd.usage(1, msg)
@@ -310,8 +337,6 @@ class GistoreCmd(object):
                     GistoreCmd.opt_verbose = 0
                 else:
                     GistoreCmd.opt_verbose -= 1
-            elif opt in ('-m'):
-                GistoreCmd.opt_message = arg
 
         if GistoreCmd.opt_verbose is not None:
             cfg.log_level = GistoreCmd.opt_verbose
@@ -345,8 +370,8 @@ class GistoreCmd(object):
         elif command in ["ls", "dir"]:
             command = 'list'
 
-        # Parse command options, and args is command params.
-        args = GistoreCmd.parse_options(args[1:])
+        # Command args
+        args = args[1:]
 
         # Set logging basic config, to stderr
         logging.basicConfig( level=cfg.log_level,

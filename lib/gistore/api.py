@@ -167,6 +167,8 @@ class Gistore(object):
         self.scm.init()
         self.rc.save()
 
+    def log(self, args=[]):
+        self.scm.log(args)
 
     def upgrade(self, oldversion):
         if oldversion == versions.GISTORE_VERSION:
