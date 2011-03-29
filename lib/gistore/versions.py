@@ -14,5 +14,5 @@
 # GNU General Public License for more details.
 #
 
-GISTORE_VERSION_FLAG="0.2.2"
+GISTORE_VERSION_FLAG="0.3"
 GISTORE_VERSION=2
