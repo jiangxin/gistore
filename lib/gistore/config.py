@@ -40,12 +40,13 @@ class DefaultConfig(object):
     store_list = {'default': None }
 
 def initConfig():
-    if not os.path.exists(DefaultConfig.tasks_dir):
-        try:
-            os.makedirs(DefaultConfig.tasks_dir)
-        except OSError:
-            print >> sys.stderr, "no permisson to create dir: %s" % DefaultConfig.tasks_dir
-            return
+    for path in ( DefaultConfig.tasks_dir, DefaultConfig.sys_config_dir ):
+        if not os.path.exists( path ):
+            try:
+                os.makedirs( path )
+            except OSError:
+                print >> sys.stderr, "no permisson to create dir: %s" % path
+                return
 
     config_file = os.path.join(DefaultConfig.sys_config_dir, 'local_config.py')
     if os.path.exists(config_file):
