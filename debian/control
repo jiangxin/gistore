@@ -11,7 +11,7 @@ Homepage: http://www.ossxp.com/
 Package: gistore
 Architecture: all
 Depends: ${misc:Depends}, ${python:Depends}, git-core, openssh-server | ssh
-Recommends: gitosis (>= 1:0.2-ossxp.5)
+Recommends: bindfs, gitosis (>= 1:0.2-ossxp.5)
 XB-Python-Version: ${python:Versions}
 Description: Backup system based on Git
  Gistore is a backup system with a DVCS as backend, and git is highly

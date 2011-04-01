@@ -1,3 +1,10 @@
+gistore (0.3.2-10) unstable; urgency=low
+
+  * New sub-command log, add, rm.
+  * Add support for Mac OS X.
+
+ -- Jiang Xin <worldhello.net@gmail.com>  Fri, 01 Apr 2011 19:29:33 +0800
+
 gistore (0.2.4-9) unstable; urgency=low
 
   * Run-time dir in /var/run/gistore, not under gistore task dir.
