@@ -362,7 +362,7 @@ class Gistore(object):
                         stdout=PIPE,
                         stderr=STDOUT )
         output = communicate(proc, "mount")[0]
-        pattern = re.compile(r"^(.*) on (.*) (type |\().*$")
+        pattern = re.compile(r"^(.*) on (.*?) (type |\().*$")
         mount_list = []
         for line in output.splitlines():
             m = pattern.search(line)
@@ -374,6 +374,7 @@ class Gistore(object):
 
         for target, src in sorted( mount_list, reverse=True ):
             umounted = False
+            stdout, stderr = None, None
             for command in self.cmd_umount:
                 proc_umnt = Popen( command + [ target ],
                                    stdout=PIPE,
