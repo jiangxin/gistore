@@ -477,7 +477,10 @@ class SCM(AbstractSCM):
                                  stderr=subprocess.STDOUT )
         pat1 = re.compile(r".\w{40} (\w*) \(.*\)?")
         pat2 = re.compile(r"No submodule mapping found in .gitmodules for path '(.*)'")
-        for line in communicate(proc, args)[0].splitlines():
+        for line in communicate(proc,
+                                args,
+                                ignore=lambda n: n.startswith("No submodule mapping found in")
+                               )[0].splitlines():
             line = line.strip()
             m = pat1.match(line)
             if m:
