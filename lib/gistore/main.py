@@ -346,6 +346,19 @@ class GistoreCmd(object):
 
     @staticmethod
     def main(argv=None):
+        # set umask if defined, default 027
+        if cfg.umask is not None:
+            os.umask(cfg.umask)
+        # set group owner if defined, default "git"
+        if isinstance(cfg.setgid, basestring):
+            try:
+                import grp
+                cfg.setgid = grp.getgrnam(cfg.setgid).gr_gid
+            except:
+                cfg.setgid = None
+        if cfg.setgid is not None:
+            os.setgid(cfg.setgid)
+
         # Parse global options...
         if argv is None:
             argv = sys.argv[1:]

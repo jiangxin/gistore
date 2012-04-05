@@ -31,6 +31,8 @@ class DefaultConfig(object):
         tasks_dir = '/etc/gistore/tasks'
     backend = "git"
     backuphistory = 200
+    umask = 027
+    setgid = "git"
 
     root_only = False
     log_level = logging.INFO
