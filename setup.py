@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
+from subprocess import Popen, PIPE, STDOUT
 
-version_string = "0.3.2"
+proc_desc  = Popen( [ "git", "describe", "--always", "--dirty" ], stdout=PIPE )
+version = proc_desc.communicate()[0]
+if version.startswith("v"):
+    version = version[1:]
 
 setup(name='gistore',
-    version=version_string,
+    version=version,
     description='Backup system using DVCS backend, such as git',
     author='Jiang Xin',
     author_email='jiangxin@ossxp.com',
