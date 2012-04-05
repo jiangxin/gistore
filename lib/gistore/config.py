@@ -19,8 +19,8 @@ import os
 import logging
 
 GISTORE_CONFIG_DIR  = ".gistore"
-GISTORE_LOG_DIR     = "logs"
-GISTORE_LOCK_DIR    = "locks"
+GISTORE_LOG_DIR     = ".gistore"
+GISTORE_LOCK_DIR    = ".gistore"
 
 class DefaultConfig(object):
     if os.getuid() != 0:
@@ -33,6 +33,7 @@ class DefaultConfig(object):
     backuphistory = 200
     umask = 027
     setgid = "git"
+    maxlogsize = 1024000
 
     root_only = False
     log_level = logging.INFO

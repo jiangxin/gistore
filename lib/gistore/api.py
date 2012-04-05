@@ -111,6 +111,13 @@ class Gistore(object):
             if not os.path.exists( dir ):
                 os.makedirs( dir )
 
+        # truncate file if filesize over limit
+        logfile = os.path.join( self.root, GISTORE_LOG_DIR, "gitstore.log" )
+        if os.access(logfile, os.F_OK):
+            if os.stat(logfile).st_size > cfg.maxlogsize:
+                fp = open(logfile, 'w')
+                fp.close()
+
         # Set file log
         filelog = logging.FileHandler( os.path.join( self.root,
                                                      GISTORE_LOG_DIR,

@@ -43,7 +43,12 @@ class SCM(AbstractSCM):
                    self.username+"@"+socket.gethostname() )
         # Not affect by info/grafts
         os.putenv( "GIT_GRAFT_FILE", "info/grafts-%s-tmp" % os.getpid() )
-        self.GIT_DIR = "repo.git"
+
+        # for back compatibility, test whether repo.git exists
+        if os.path.exists(os.path.join(self.root, "repo.git")):
+            self.GIT_DIR = "repo.git"
+        else:
+            self.GIT_DIR = ""
         args = [ 'which', 'git' ]
         proc = subprocess.Popen( args, stdout=subprocess.PIPE, stderr=None )
         self.gitcmd = communicate(proc, args)[0].strip()
