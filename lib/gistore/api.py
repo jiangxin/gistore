@@ -97,11 +97,11 @@ class Gistore(object):
                             "Not a empty directory: %s" % ( self.root) )
         elif not os.path.exists( os.path.join( self.root,
                                                GISTORE_CONFIG_DIR,
-                                               "config") ):
+                                               GISTORE_CONFIG_FILE ) ):
                 raise TaskNotExistsError( "Task does not exists: %s." % (
                                           os.path.join( self.root,
                                                         GISTORE_CONFIG_DIR,
-                                                        "config") ) )
+                                                        GISTORE_CONFIG_FILE ) ) )
 
         # Create needed directories
         check_dirs = [ os.path.join( self.root, GISTORE_LOG_DIR ),
@@ -112,7 +112,7 @@ class Gistore(object):
                 os.makedirs( dir )
 
         # truncate file if filesize over limit
-        logfile = os.path.join( self.root, GISTORE_LOG_DIR, "gitstore.log" )
+        logfile = os.path.join( self.root, GISTORE_LOG_DIR, GISTORE_LOG_FILE )
         if os.access(logfile, os.F_OK):
             if os.stat(logfile).st_size > cfg.maxlogsize:
                 fp = open(logfile, 'w')
@@ -121,7 +121,7 @@ class Gistore(object):
         # Set file log
         filelog = logging.FileHandler( os.path.join( self.root,
                                                      GISTORE_LOG_DIR,
-                                                     "gitstore.log" ) )
+                                                     GISTORE_LOG_FILE ) )
         filelog.setLevel( cfg.log_level )
         # set a format which is simpler for filelog use
         formatter = logging.Formatter(
@@ -229,7 +229,7 @@ class Gistore(object):
         self.store_list = {}
         store_list = {}
 
-        config_file = os.path.join(self.root, GISTORE_CONFIG_DIR, "config")
+        config_file = os.path.join(self.root, GISTORE_CONFIG_DIR, GISTORE_CONFIG_FILE)
         self.rc = RepoConfig( config_file )
 
         dir_list = cfg.store_list.get(self.taskname, [])
@@ -442,7 +442,7 @@ class Gistore(object):
     def has_lock(self, event):
         lockfile = os.path.join( self.root,
                                  GISTORE_LOCK_DIR,
-                                 "_gistore-lock-" + event )
+                                 GISTORE_LOCK_FILE + event )
         if os.path.exists( lockfile ):
             return True
         else:
@@ -453,7 +453,7 @@ class Gistore(object):
 
         lockfile = os.path.join( self.root,
                                  GISTORE_LOCK_DIR,
-                                 "_gistore-lock-" + event )
+                                 GISTORE_LOCK_FILE + event )
         f = open( lockfile, 'w' )
         f.write( str( os.getpid() ) )
         f.close()
@@ -461,21 +461,21 @@ class Gistore(object):
     def assert_lock(self, event):
         lockfile = os.path.join( self.root,
                                  GISTORE_LOCK_DIR,
-                                 "_gistore-lock-" + event )
+                                 GISTORE_LOCK_FILE + event )
         if not os.path.exists( lockfile ):
             raise GistoreLockError( "Has not lock using: %s" % lockfile )
 
     def assert_no_lock(self, event):
         lockfile = os.path.join( self.root,
                                  GISTORE_LOCK_DIR,
-                                 "_gistore-lock-" + event )
+                                 GISTORE_LOCK_FILE + event )
         if os.path.exists( lockfile ):
             raise GistoreLockError( "Lock already exists: %s" % lockfile )
 
     def unlock(self, event):
         lockfile = os.path.join( self.root,
                                  GISTORE_LOCK_DIR,
-                                 "_gistore-lock-" + event )
+                                 GISTORE_LOCK_FILE + event )
         try:
             os.unlink( lockfile )
         except OSError:

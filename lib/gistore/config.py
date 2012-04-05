@@ -19,8 +19,11 @@ import os
 import logging
 
 GISTORE_CONFIG_DIR  = ".gistore"
-GISTORE_LOG_DIR     = ".gistore"
-GISTORE_LOCK_DIR    = ".gistore"
+GISTORE_LOG_DIR     = "info"
+GISTORE_LOCK_DIR    = "info"
+GISTORE_CONFIG_FILE = "config"
+GISTORE_LOG_FILE    = "gistore.log"
+GISTORE_LOCK_FILE   = "gistore.lock."
 
 class DefaultConfig(object):
     if os.getuid() != 0:
