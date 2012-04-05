@@ -67,10 +67,13 @@ EOF
   fi
 }
 
+# Not setup gitosis acount any more!
+# New gistore task is a single bare repo, can be easily integrate
+# with git server, no matter gitosis, gitolite, or others.
 
-if dpkg --compare-versions "$2" lt 0.2.4-5; then
-  setup_gistore_user
-  hack_sshd_config
-fi
+# if dpkg --compare-versions "$2" lt 0.2.4-5; then
+#   setup_gistore_user
+#   hack_sshd_config
+# fi
 
 #DEBHELPER#
