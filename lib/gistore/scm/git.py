@@ -509,7 +509,13 @@ class SCM(AbstractSCM):
         os.putenv( "GIT_GRAFT_FILE", graft_file )
         args = self.get_command(work_tree=False) + [
                         "log" ] + args
-        os.execv( args[0], args )
+        return subprocess.call( args )
+
+
+    def post_check(self):
+        args = self.get_command(work_tree=False) + [
+                    "gc", "--auto" ]
+        return subprocess.call( args )
 
 
 # vim: et ts=4 sw=4
