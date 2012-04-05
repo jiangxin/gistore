@@ -37,6 +37,7 @@ class SCM(AbstractSCM):
                                    work_tree,
                                    backup_history,
                                    backup_copies )
+        os.putenv( "LANGUAGE", "C" )
         os.putenv( "GIT_COMMITTER_NAME", self.username )
         os.putenv( "GIT_COMMITTER_EMAIL",
                    self.username+"@"+socket.gethostname() )
