@@ -46,14 +46,14 @@ class Gistore(object):
 
         self.cmd_mount = []
         self.cmd_umount = []
+        self.cmd_mount.append( ["mount", "--rbind", "--read-only", "--no-mtab"] )
+        if self.try_sudo:
+            self.cmd_mount.append( ["sudo", "mount", "--rbind", "--read-only", "--no-mtab"] )
         if os.system("which bindfs >/dev/null 2>&1") == 0:
-            self.cmd_mount.append( ["bindfs", "-n"] )
+            self.cmd_mount.append( ["bindfs", "-n", "-p", "a-w"] )
             if self.try_sudo:
                 # If use -n here, user cannot read the mounting file systems.
-                self.cmd_mount.append( ["sudo", "bindfs"] )
-        self.cmd_mount.append( ["mount", "--rbind"] )
-        if self.try_sudo:
-            self.cmd_mount.append( ["sudo", "mount", "--rbind"] )
+                self.cmd_mount.append( ["sudo", "bindfs", "-p", "a-w"] )
 
         if os.system("which fusermount >/dev/null 2>&1") == 0:
             self.cmd_umount.append( ["fusermount","-u"] )
