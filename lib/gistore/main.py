@@ -357,7 +357,10 @@ class GistoreCmd(object):
             except:
                 cfg.setgid = None
         if cfg.setgid is not None:
-            os.setgid(cfg.setgid)
+            try:
+                os.setgid(cfg.setgid)
+            except OSError:
+                print >> sys.stderr, "Warning: no permission to setgid."
 
         # Parse global options...
         if argv is None:
