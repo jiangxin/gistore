@@ -199,7 +199,7 @@ class Gistore(object):
             dir_list = filter( lambda n: not store_list[n].has_key('enabled') or
                                store_list[n]['enabled'] in ['true', 'yes'],
                                store_list.keys() )
-            for p in sorted(map(os.path.realpath, dir_list)):
+            for p, porg in sorted(map(lambda n: (os.path.realpath(n), os.path.abspath(n)), dir_list)):
                 if os.path.exists(p):
                     # Remove duplicate path
                     if len(targets) and ( targets[-1] == p or
@@ -215,11 +215,14 @@ class Gistore(object):
 
                     # check if p is child of self.root
                     elif p.startswith(os.path.join(self.root,"")):
-                        if p != os.path.join(self.root, GISTORE_CONFIG_DIR):
+                        if ( (len(GISTORE_CONFIG_DIR) > 0 and
+                              p != os.path.join(self.root, GISTORE_CONFIG_DIR)) or
+                             (len(GISTORE_CONFIG_DIR) == 0 and
+                              p != os.path.join(self.root, GISTORE_CONFIG_DIR, GISTORE_CONFIG_FILE)) ):
                             log.error("Not store root's subdir: %s" % p)
                             continue
 
-                    targets.append(p)
+                    targets.append(porg)
 
                 else:
                     log.warning("%s not exists." % p)
@@ -234,7 +237,10 @@ class Gistore(object):
 
         dir_list = cfg.store_list.get(self.taskname, [])
         # backup .gistore config files
-        dir_list.append(os.path.join(self.root, GISTORE_CONFIG_DIR))
+        if len(GISTORE_CONFIG_DIR) > 0:
+            dir_list.append(os.path.join(self.root, GISTORE_CONFIG_DIR))
+        else:
+            dir_list.append(os.path.join(self.root, GISTORE_CONFIG_DIR, GISTORE_CONFIG_FILE))
 
         for path in dir_list:
             store_list[path] = self.rc.defaults.copy()
@@ -243,7 +249,8 @@ class Gistore(object):
 
         for rawkey in filter( lambda n: n.startswith('store.'), self.rc.repo_cfg.keys() ):
             section, key = rawkey.rsplit('.', 1)
-            section = os.path.realpath(section[6:])
+            # Use what user provided, not realpath
+            section = os.path.abspath(section[6:])
             key = key.lower()
             if not store_list.has_key( section ):
                 store_list[section] = self.rc.defaults.copy()
@@ -295,6 +302,10 @@ class Gistore(object):
                                                     GISTORE_CONFIG_DIR ) ):
             return os.path.join( self.WORK_TREE,
                                  GISTORE_CONFIG_DIR.rstrip('/') )
+        elif os.path.realpath(p) == os.path.realpath( os.path.join( self.root,
+                                                    GISTORE_CONFIG_DIR, GISTORE_CONFIG_FILE ) ):
+            return os.path.join( self.WORK_TREE,
+                                 GISTORE_CONFIG_DIR, GISTORE_CONFIG_FILE )
         else:
             return os.path.join( self.WORK_TREE, p.lstrip('/') )
 
@@ -328,7 +339,7 @@ class Gistore(object):
             else:
                 mounted = False
                 for command in self.cmd_mount:
-                    proc_mnt = Popen( command + [ p, target ],
+                    proc_mnt = Popen( command + [ os.path.realpath(p), target ],
                                       stdout=PIPE,
                                       stderr=STDOUT )
                     try:
@@ -354,7 +365,7 @@ class Gistore(object):
 
     def removedirs(self, target):
         target = os.path.realpath(target)
-        if target == os.path.realpath(self.runtime_dir):
+        if target == os.path.realpath(self.runtime_dir) or target == '/':
             return
         try:
             os.rmdir(target)
@@ -363,23 +374,8 @@ class Gistore(object):
         self.removedirs(os.path.dirname(target))
 
     def umount(self):
-        self.assert_no_lock("commit")
-
-        proc = Popen( [ "mount" ],
-                        stdout=PIPE,
-                        stderr=STDOUT )
-        output = communicate(proc, "mount")[0]
-        pattern = re.compile(r"^(.*) on (.*?) (type |\().*$")
-        mount_list = []
-        for line in output.splitlines():
-            m = pattern.search(line)
-            if m:
-                src = m.group(1)
-                target = os.path.realpath( m.group(2) )
-                if target.startswith( self.WORK_TREE ):
-                    mount_list.append( (target, src, ) )
-
-        for target, src in sorted( mount_list, reverse=True ):
+        # umount a already mounting point
+        def umount_target(src, target):
             umounted = False
             stdout, stderr = None, None
             for command in self.cmd_umount:
@@ -409,7 +405,7 @@ class Gistore(object):
 
                 raise CommandError( msg )
 
-        for target, src in sorted( mount_list, reverse=True ):
+        def remove_target(src, target):
             log.debug("remove %s" % target)
             if ( not self.is_mount(src, target)
                  and target.startswith( self.WORK_TREE )
@@ -423,8 +419,44 @@ class Gistore(object):
                          and target != self.WORK_TREE ):
                         self.removedirs( target )
 
-        self.unlock("mount")
+        # Check mounting point by mount list, but target mounted using
+        # --no-mtab option will not show in list
+        def umount_by_mountlist():
+            proc = Popen( [ "mount" ],
+                            stdout=PIPE,
+                            stderr=STDOUT )
+            output = communicate(proc, "mount")[0]
+            pattern = re.compile(r"^(.*) on (.*?) (type |\().*$")
+            mount_list = []
+            for line in output.splitlines():
+                m = pattern.search(line)
+                if m:
+                    src = m.group(1)
+                    target = os.path.realpath( m.group(2) )
+                    if target.startswith( self.WORK_TREE ):
+                        mount_list.append( (target, src, ) )
 
+            for target, src in sorted( mount_list, reverse=True ):
+                umount_target(src, target)
+
+            for target, src in sorted( mount_list, reverse=True ):
+                remove_target(src, target)
+
+        ## Begin umount. first check mount by fstat.
+        self.assert_no_lock("commit")
+
+        for p in sorted(self.store_list.keys(), reverse=True):
+            target = self.__mnt_target(p)
+            if self.is_mount(p, target):
+                umount_target(p, target)
+
+            remove_target(p, target)
+
+        # Get mounting point by mount tab and remount again
+        umount_by_mountlist()
+
+        # Remove lock file by previous mount command
+        self.unlock("mount")
 
     def cleanup(self):
         self.unlock("commit")
@@ -483,15 +515,16 @@ class Gistore(object):
 
     def add(self, args=[]):
         for path in args:
-            key = "store.%s.enabled" % os.path.realpath(path)
+            key = "store.%s.enabled" % os.path.abspath(path)
             self.rc.add(key, "true")
 
 
     def rm(self, args=[]):
         for path in args:
-            keys = [ "store.%s.enabled" % os.path.realpath(path) ]
-            if os.path.realpath(path) != path:
-                keys.append( "store.%s.enabled" % path )
+            keys = [ "store.%s.enabled" % os.path.abspath(path) ]
+            # Remove by realpath again
+            if os.path.realpath(path) != os.path.abspath(path):
+                keys.append( "store.%s.enabled" % os.path.realpath(path) )
             for key in keys:
                 if self.rc.repo_cfg.has_key( key ):
                     if self.rc.repo_cfg[ key ] == 'true':
