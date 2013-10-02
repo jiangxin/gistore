@@ -32,7 +32,7 @@ test_expect_success 'initialize for checkout' '
 	gistore commit --repo repo2.git -m "initialize for checkout" &&
 	test ! -d outdir &&
 	gistore checkout  --repo repo.git --to outdir &&
-	find outdir -type f | sed -e "s#${cwd}##g" | sort > actual &&
+	find outdir -type f | sed -e "s#${cwd}##g" | LC_COLLATE=C sort > actual &&
 	test_cmp expect actual
 '
 
@@ -73,7 +73,7 @@ test_expect_success 'checkout continue' '
 	gistore add  --repo repo.git root/src &&
 	gistore commit --repo repo.git -m "checkout continue" &&
 	gistore checkout --repo repo.git --to outdir &&
-	find outdir -type f | sed -e "s#${cwd}##g" | sort > actual &&
+	find outdir -type f | sed -e "s#${cwd}##g" | LC_COLLATE=C sort > actual &&
 	test_cmp expect actual
 '
 
@@ -86,7 +86,7 @@ EOF
 
 test_expect_success 'partial checkout' '
 	gistore checkout --repo repo.git --to partial "${cwd#/}/root/src/lib" &&
-	find partial -type f | sed -e "s#${cwd}##g" | sort > actual &&
+	find partial -type f | sed -e "s#${cwd}##g" | LC_COLLATE=C sort > actual &&
 	test_cmp expect actual
 '
 
@@ -97,7 +97,7 @@ EOF
 
 test_expect_success 'checkout history' '
 	gistore checkout --repo repo.git --to history --rev HEAD^ &&
-	find history -type f | sed -e "s#${cwd}##g" | sort > actual &&
+	find history -type f | sed -e "s#${cwd}##g" | LC_COLLATE=C sort > actual &&
 	test_cmp expect actual
 '
 

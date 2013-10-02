@@ -32,6 +32,7 @@ cat >expect <<EOF
 Error: Failed to restore-from-backups.
 Error: Path "non-exist-dir" does not exist.
 EOF
+
 test_expect_success 'fail to restore from non-exist-dir' '
 	test_must_fail gistore restore-from-backups --from non-exist-dir --to no-exist-repo.git &&
 	(gistore restore-from-backups --from non-exist-dir --to no-exist-repo.git 2>actual || true) &&
@@ -77,9 +78,9 @@ test_expect_success 'initialize for export' '
 	test "$(count_git_commits repo.git)" = "19" &&
 	git_log_only_subject repo.git > actual &&
 	test_cmp expect actual &&
-	test "$(count_git_objects repo.git)" = "349" &&
+	count=$(count_git_objects repo.git) &&
 	gistore gc --repo repo.git --force &&
-	test "$(count_git_objects repo.git)" = "278"
+	test $(count_git_objects repo.git) -lt $count
 '
 
 test_expect_success 'export backups' '
@@ -97,7 +98,6 @@ EOF
 
 test_expect_success 'restore from backups' '
 	gistore restore-from-backups --from backups --to restore.git &&
-	test $(count_git_objects restore.git) -eq 65 &&
 	test $(count_git_commits restore.git) -eq 4 &&
 	git_log_only_subject restore.git > actual &&
 	test_cmp expect actual
@@ -116,7 +116,6 @@ test_expect_success 'export another repo' '
 		gistore commit --repo repo2.git -m "Repo2 commit No. $n";
 	done &&
 	test $(count_git_commits repo2.git) -eq 2 &&
-	test $(count_git_objects repo2.git) -eq 33 &&
 	gistore export-to-backups --repo repo2.git --to backups2 &&
 	test $(ls backups2/001-full-backup-*.pack | wc -l) -eq 1 &&
 	test $(ls backups2/*-incremental-*.pack | wc -l) -eq 1
@@ -131,7 +130,6 @@ test_expect_success 'restore from backups2' '
 	gistore restore-from-backups --from backups2 --to restore.git >result 2>&1 &&
 	new_commit=$(grep $_x40 result) &&
 	test $(count_git_commits restore.git) -eq 4 &&
-	test $(count_git_objects restore.git) -eq 89 &&
 	(
 		cd restore.git;
 		git update-ref refs/heads/master $new_commit;

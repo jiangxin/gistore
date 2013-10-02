@@ -9,9 +9,9 @@ TEST_NO_CREATE_REPO=NoThanks
 . ./test-lib.sh
 
 test_expect_success 'gistore version' '
-	gistore --version | grep "Gistore version [0-9.]\+ (.\+)" &&
-	gistore -v | grep "Gistore version [0-9.]\+ (.\+)" &&
-	gistore version | grep "Gistore version [0-9.]\+ (.\+)"
+	gistore --version | grep "Gistore version [^ ]\+ (.\+)" &&
+	test "$(gistore -v)" = "$(gistore --version)" &&
+	test "$(gistore version)" = "$(gistore --version)"
 '
 
 test_expect_success 'compare two versions' '

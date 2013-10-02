@@ -255,12 +255,12 @@ test_expect_success 'commit log of master (with grafts)' '
 '
 
 test_expect_success 'purge history using gc' '
-	test "$(count_git_objects repo.git)" = "463" &&
+	count=$(count_git_objects repo.git) &&
 	gistore repo repo.git prune --expire=now &&
 	gistore repo repo.git gc &&
-	test "$(count_git_objects repo.git)" = "463" &&
+	test $(count_git_objects repo.git) -eq $count &&
 	gistore gc --repo repo.git --force &&
-	test "$(count_git_objects repo.git)" = "250"
+	test $(count_git_objects repo.git) -lt $count
 '
 
 test_done

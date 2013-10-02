@@ -45,8 +45,6 @@ test_expect_success 'initial config' '
 cat >expect << EOF
     hello => repo1.git
     world => repo2.git
-System level Tasks
-User level Tasks
 EOF
 
 test_expect_success 'task add and task list' '
@@ -54,7 +52,7 @@ test_expect_success 'task add and task list' '
 	gistore task add world repo2.git &&
 	gistore task list | grep -q "$cwd" &&
 	gistore task list | sed -e "/^$/d" | \
-		sed -e "s#${cwd}/##g" | sort -u > actual &&
+		sed -e "s#${cwd}/##g" | grep "^ " | sort -u > actual &&
 	test_cmp expect actual
 '
 
@@ -108,8 +106,6 @@ test_expect_success 'task remove' '
 cat >expect << EOF
     hello => repo1.git
     world => repo2.git
-System level Tasks
-User level Tasks
 EOF
 
 test_expect_success 'commit-all while missing task repo' '
@@ -117,7 +113,7 @@ test_expect_success 'commit-all while missing task repo' '
 	gistore task add world repo2.git &&
 	gistore task list | grep -q "$cwd" &&
 	gistore task list | sed -e "/^$/d" | \
-		sed -e "s#${cwd}/##g" | sort -u > actual &&
+		sed -e "s#${cwd}/##g" | grep "^ " | sort -u > actual &&
 	test_cmp expect actual &&
 	do_hack &&
 	gistore commit-all &&
