@@ -1,0 +1,25 @@
+#!/bin/sh
+
+GISTORE_FILE_DIRECTORY=$(dirname "$0")
+GISTORE_FILE_DIRECTORY=$(cd "$GISTORE_FILE_DIRECTORY" && pwd -P)
+
+GISTORE_FILENAME=$(basename "$0")
+export GISTORE_EXECUTABLE="$GISTORE_FILE_DIRECTORY/$GISTORE_FILENAME"
+
+GISTORE_SYMLINK=$(readlink $0)
+if [ -n "$GISTORE_SYMLINK" ]
+then
+	GISTORE_SYMLINK_DIRECTORY=$(dirname "$GISTORE_SYMLINK")
+	GISTORE_FILE_DIRECTORY=$(cd "$GISTORE_FILE_DIRECTORY" &&
+	                      cd "$GISTORE_SYMLINK_DIRECTORY" && pwd -P)
+fi
+
+GISTORE_LIBRARY_DIRECTORY=$(cd "$GISTORE_FILE_DIRECTORY"/../lib && pwd -P)
+
+GISTORE_SYSTEM=$(uname -s | tr "[:upper:]" "[:lower:]")
+if [ "$GISTORE_SYSTEM" = "darwin" ]
+then
+	exec "$GISTORE_LIBRARY_DIRECTORY/gistore.rb" "$@"
+else
+	exec ruby -W0 "$GISTORE_LIBRARY_DIRECTORY/gistore.rb" "$@"
+fi

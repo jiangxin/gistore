@@ -1,17 +1,30 @@
-New in v0.1.x (2010/01/23)
+Release Notes
+=============
+
+v1.0 (2013/10/23)
 ------------------------
 
- -  Fixed: create /etc/gistore on the fly, and fixed setuptools in-compatible
-    install. (0.1.1)
- -  Fixed: force umount failed. (0.1.2)
- -  New feature: show not backup submodule. (0.1.3)
- -  More signal handler. (0.1.4)
- -  New command commit_all. (0.1.5)
- -  Debianized. (0.1.5)
- -  Git version belowe 1.6, can not take directory after git init (0.1.6)
+ * Rewrite Gistore in ruby instead of in python.
+ * Using thor [1] for the command-line interface.
+ * Do not use mount any more, but use "info/exclude" to exclude unwanted
+   files and directories.
+ * Write test cases using the same framework as git.git.
+ * More subcommands, such as export-to-backups, restore-from-backups.
 
-New in v0.1 (2010/01/23)
+v0.1.x (2010/01/23)
 ------------------------
 
- -  Initial version.
+ * Fixed: create /etc/gistore on the fly, and fixed setuptools in-compatible
+   install. (0.1.1)
+ * Fixed: force umount failed. (0.1.2)
+ * New feature: show not backup submodule. (0.1.3)
+ * More signal handler. (0.1.4)
+ * New command commit_all. (0.1.5)
+ * Debianized. (0.1.5)
+ * Git version belowe 1.6, can not take directory after git init (0.1.6)
+
+v0.1 (2010/01/23)
+------------------------
+
+ * Initial version.
 
