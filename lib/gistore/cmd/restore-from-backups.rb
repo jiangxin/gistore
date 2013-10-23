@@ -23,7 +23,7 @@ module Gistore
 
       if not File.exist? repo_name
         Repo.init repo_name
-      elsif not Repo.initialized? repo_name
+      elsif not Gistore.is_git_repo? repo_name
         raise "Path \"#{repo_name}\" is not a valid repo, create one using \"gistore init\""
       end
 

@@ -239,6 +239,12 @@ module Gistore
         {}
       end
     end
+
+    def is_git_repo?(name)
+      File.directory?("#{name}/objects") &&
+      File.directory?("#{name}/refs") &&
+      File.exist?("#{name}/config")
+    end
   end
 
   def git_cmd; self.class.git_cmd; end

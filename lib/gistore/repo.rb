@@ -10,12 +10,6 @@ module Gistore
     attr_reader :task_name, :repo_path, :gistore_config, :gistore_backups
 
     class <<self
-      def initialized?(name)
-        File.directory?("#{name}/objects") &&
-        File.directory?("#{name}/refs") &&
-        File.exist?("#{name}/config")
-      end
-
       def init(name, options = {})
         if File.directory? name and Dir.entries(name).size != 2
           raise "Non-empty directory '#{name}' is already exist."
@@ -598,7 +592,7 @@ Full backup of #{task_name || File.basename(repo_path)}
 
   private
     def is_git_repo?
-      self.class.initialized?(repo_path)
+      Gistore.is_git_repo? repo_path
     end
 
     def load_default_config
