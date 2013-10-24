@@ -27,9 +27,10 @@ module Gistore
     option :plan, :required => false, :type => :string,
            :desc => "no-gc, no-compress, or normal (default)"
     def init(name=nil)
+      parse_common_options
       Repo.init(options[:repo] || name || ".", options)
     rescue Exception => e
-      $stderr.puts "Error: #{e.message}"
+      Tty.die "#{e.message}"
     end
   end
 end

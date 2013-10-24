@@ -6,8 +6,7 @@ module Gistore
     desc "commit [-m <message>]", "Start commit changes (i.e. backup)"
     option :message, :aliases => :m, :desc => "commit log"
     def commit(*args)
-      gistore = Repo.new(options[:repo] || ".")
-      puts "debug: start to commit #{options[:repo] || "."}"
+      parse_common_options_and_repo
 
       # Check if backup needs rotate
       gistore.backup_rotate
@@ -55,7 +54,7 @@ module Gistore
       # Add contents of a submodule, not add as a submodule
       submodules = gistore.remove_submodules
       until submodules.empty? do
-          puts "Re-add files in submodules: #{submodules.join(', ')}"
+          Tty.debug "Re-add files in submodules: #{submodules.join(', ')}"
           submodules.each do |submod|
               git_status += gistore.add_submodule(submod)
           end
@@ -103,16 +102,15 @@ module Gistore
                      "#{gistore.repo_path}"
 
       if committed
-        puts "Successfully backup repo: #{display_name}"
+        Tty.info "Successfully backup repo: #{display_name}"
+        # Run git-gc
+        gistore.git_gc
       else
-        puts "Nothing changed for repo: #{display_name}"
+        Tty.info "Nothing changed for repo: #{display_name}"
       end
 
-      # Run git-gc
-      gistore.git_gc
-
     rescue Exception => e
-      $stderr.puts "Error: #{e.message}"
+      Tty.die "#{e.message}"
     end
 
     map ["ci_all", "ci-all", "backup_all", "backup-all"] => :commit_all

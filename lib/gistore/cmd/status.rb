@@ -8,7 +8,7 @@ module Gistore
                     :desc => "Show backup list"
     option :git, :type => :boolean, :desc => "Show git status"
     def status(*args)
-      parse_common_options
+      parse_common_options_and_repo
       all = (not options.include? "config" and
              not  options.include? "backup" and
              not  options.include? "git")
@@ -17,13 +17,13 @@ module Gistore
         puts "Task name     : #{gistore.task_name || "-"}"
         puts "Gistore       : #{gistore.repo_path}"
         puts "Configurations:"
-        puts Gistore.show_column gistore.gistore_config.to_a.map {|h| "#{h[0]}: #{h[1].inspect}"}
+        puts Tty.show_columns gistore.gistore_config.to_a.map {|h| "#{h[0]}: #{h[1].inspect}"}
         puts
       end
 
       if all
         puts "Backup entries:"
-        puts Gistore.show_column gistore.gistore_backups
+        puts Tty.show_columns gistore.gistore_backups
         puts
       elsif options[:backup]
         puts gistore.gistore_backups.join("\n")
@@ -34,7 +34,7 @@ module Gistore
         gistore.safe_system(git_cmd, "status", *args)
       end
     rescue Exception => e
-      $stderr.puts "Error: #{e.message}"
+      Tty.die "#{e.message}"
     end
   end
 end

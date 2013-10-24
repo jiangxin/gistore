@@ -4,6 +4,7 @@ module Gistore
     option :from, :required => true, :desc => "path of backup packs", :banner => "<from>"
     option :to, :required => true, :desc => "path of repo.git to restore to", :banner => "<repo.git>"
     def restore_from_backups
+      parse_common_options
       from = options[:from]
       repo_name = options[:to]
       backups = []
@@ -44,7 +45,7 @@ module Gistore
             output << stderr.read
           end
         rescue
-          $stderr.puts "Failed to unpack #{pack}"
+          Tty.warning "failed to unpack #{pack}"
         end
       end
 
@@ -73,8 +74,8 @@ module Gistore
         end
       end
     rescue Exception => e
-      $stderr.puts output
-      $stderr.puts "Error: #{e.message}"
+      Tty.error "Failed to restore-from-backups.\n#{output}"
+      Tty.die "#{e.message}"
     end
 
   private
@@ -82,7 +83,7 @@ module Gistore
     def show_dangling_commits(danglings)
       puts "Found dangling commits after restore backups:"
       puts "\n"
-      puts Gistore.show_column danglings
+      puts Tty.show_columns danglings
       puts "\n"
       puts "You may like to update master branch with it(them) by hands."
     end

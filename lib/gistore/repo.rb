@@ -77,13 +77,13 @@ module Gistore
 
     def normalize_entry(entry)
       unless entry.start_with? '/'
-        $stderr.puts "Warning: entry not start with '/'"
+        Tty.error "entry not start with '/'"
         return nil
       end
       # Note: not support UNC names
       result = entry.gsub(/\/\/+/, '/')
       if ['/'].include? result
-        $stderr.puts "Warning: ignore root entry!"
+        Tty.error "root entry ignored!"
         return nil
       end
       result
@@ -93,10 +93,10 @@ module Gistore
       return false unless entry
       entry_path = realpath(entry)
       if repo_path == entry_path or repo_path =~ /^#{entry_path}\//
-        $stderr.puts "Gistore repo is a subdir of entry: #{entry_path}"
+        Tty.warning "gistore repo is a subdir of entry: #{entry_path}"
         return false
       elsif entry_path =~ /^#{repo_path}\//
-        $stderr.puts "Entry is a subdir of gistore repo: #{repo_path}"
+        Tty.warning "entry is a subdir of gistore repo: #{repo_path}"
         return false
       else
         return true
@@ -109,13 +109,13 @@ module Gistore
         entry = normalize_entry(entry)
       end
       if not entry
-        $stderr.puts "Warning: entry is nil"
+        Tty.warning "entry is nil"
       elsif not validate_entry(entry)
-        $stderr.puts "Warning: entry (#{entry}) is not valid."
+        Tty.warning "entry (#{entry}) is not valid."
       elsif @gistore_backups.include? entry
-        $stderr.puts "Warning: entry (#{entry}) is already added."
+        Tty.warning "entry (#{entry}) is already added."
       else
-        puts "Add entry: #{entry}."
+        Tty.info "add entry: #{entry}."
         @gistore_backups << entry
         entry
       end
@@ -123,16 +123,16 @@ module Gistore
 
     def remove_entry(entry)
       if not entry
-        $stderr.puts "Warning: entry is nil"
+        Tty.warning "entry is nil"
       else
         unless @gistore_backups.include? entry
           entry = File.expand_path(entry)
           entry = normalize_entry(entry)
         end
         if @gistore_backups.delete entry
-          puts "Remove entry: #{entry}."
+          Tty.info "remove entry: #{entry}."
         else
-          $stderr.puts "Entry (#{entry}) not in backup list, nothing removed."
+          Tty.warning "entry (#{entry}) not in backup list, nothing removed."
         end
       end
     end
@@ -145,7 +145,7 @@ module Gistore
           if (entry.end_with? '/' or
               backups[-1].size == entry.size or
               entry.charat(backups[-1].size) == '/')
-            $stderr.puts "Remove \"#{entry}\", for it has been added as \"#{backups[-1]}\""
+            Tty.warning "remove \"#{entry}\", for it has been added as \"#{backups[-1]}\""
             next
           end
         end
@@ -205,7 +205,7 @@ module Gistore
       else
         k, v = args
         if args.size == 0
-          puts Gistore.show_column gistore_config.to_a.map {|h| "#{h[0]} : #{h[1].inspect}"}
+          puts Tty.show_columns gistore_config.to_a.map {|h| "#{h[0]} : #{h[1].inspect}"}
         elsif args.size <= 2 and gistore_config.include? k
           if args.size == 1
             puts gistore_config[k]
@@ -216,9 +216,6 @@ module Gistore
         else
           # Unset non-exist variable return error 5.
           system(git_cmd, 'config', *args)
-          if options[:check_return] and $? and $?.exitstatus != 0
-            raise CommandExit.new($?.exitstatus)
-          end
         end
       end
     end
@@ -431,7 +428,7 @@ module Gistore
       if submodules.empty?
         []
       else
-        puts "Remove submodules: #{submodules.join(", ")}"
+        Tty.debug "Remove submodules: #{submodules.join(", ")}"
         system(git_cmd, "rm", "-f", "--cached", "-q", *submodules)
         submodules
       end
@@ -473,10 +470,10 @@ module Gistore
                        :without_grafts => true,
                        :check_return => false){|stdout| stdout.readlines.size}.to_i
       if count <= increment_backup_number
-          puts "No backup rotate needed. #{count} <= #{increment_backup_number}"
+          Tty.debug "no backup rotate needed. #{count} <= #{increment_backup_number}"
           return
       else
-          puts "Debug: start to rotate branch, because #{count} > #{increment_backup_number}"
+          Tty.debug "start to rotate branch, because #{count} > #{increment_backup_number}"
       end
 
       # list branches with prefix: gistore/
@@ -496,7 +493,7 @@ module Gistore
         until branches.size <= full_backup_number
           right = branches.pop
           shellout git_cmd, "branch", "-D", right
-          puts "Debug: deleted unwanted branch - #{right}"
+          Tty.debug "deleted unwanted branch - #{right}"
         end
       end
 
@@ -517,7 +514,7 @@ module Gistore
         if left and right
           # shellout git_cmd, "update-ref", "refs/heads/#{right}", "refs/heads/#{left}"
           shellout git_cmd, "branch", "-f", right, left
-          puts "Debug: update branch #{right} (value from #{left})"
+          Tty.debug "update branch #{right} (value from #{left})"
         end
         right = left
       end
@@ -526,7 +523,7 @@ module Gistore
       old_branch = "master"
       new_branch = branches[0] || "gistore/1"
       shellout git_cmd, "branch", "-f", new_branch, old_branch
-      puts "Debug: update branch #{new_branch} (from master)"
+      Tty.debug "update branch #{new_branch} (from master)"
 
       # Run: git cat-file commit master | \
       #          sed  '/^parent/ d'     | \
@@ -542,7 +539,7 @@ module Gistore
             cobj << <<-EDIT_COMMIT_LOG
 Full backup of #{task_name || File.basename(repo_path)}
 
-#{Gistore.show_column gistore_backups}
+#{Tty.show_columns gistore_backups}
 
 ** Copy from this commit **
 
@@ -562,7 +559,7 @@ Full backup of #{task_name || File.basename(repo_path)}
 
       raise "Bad object_id created by 'git hash-object'" if object_id !~ /^[0-9a-f]{40}$/
       shellout git_cmd, "update-ref", "refs/heads/master", object_id
-      puts "Debut: update master with #{object_id}"
+      Tty.debug "update master with #{object_id}"
 
       # create file .git/info/grafts.
       #   parent of object_id -> gistore/N^
@@ -617,7 +614,7 @@ Full backup of #{task_name || File.basename(repo_path)}
           safe_system git_cmd, "gc", *args
         end
       else
-        $stderr.puts "GC is disabled."
+        Tty.warning "GC is disabled."
       end
     end
 

@@ -5,18 +5,18 @@ module Gistore
     option :rev, :aliases => [:r], :desc => "Revision to checkout", :banner => "<rev>"
     option :to, :required => true, :banner => "<path>", :desc => "a empty directory to save checkout items"
     def checkout(*args)
-      gistore = Repo.new(options[:repo] || ".")
+      parse_common_options_and_repo
       work_tree = options[:to]
       if File.exist? work_tree
         if not File.directory? work_tree
-          abort "\"#{work_tree}\" is not a valid directory."
+          Tty.die "\"#{work_tree}\" is not a valid directory."
         elsif File.file? File.join(work_tree, ".git")
           gitfile = File.open(File.join(work_tree, ".git")) {|io| io.read}.strip
           if gitfile != "gitdir: #{gistore.repo_path}"
-            abort "\"#{work_tree}\" not a checkout from #{gistore.repo_path}"
+            Tty.die "\"#{work_tree}\" not a checkout from #{gistore.repo_path}"
           end
         elsif Dir.entries(work_tree).size != 2
-          abort "\"#{work_tree}\" is not a blank directory."
+          Tty.die "\"#{work_tree}\" is not a blank directory."
         end
       else
         require 'fileutils'
@@ -42,11 +42,10 @@ module Gistore
         end
       end 
 
-    rescue SystemExit => e
+    rescue SystemExit
       exit 1
     rescue Exception => e
-      $stderr.puts "Error: #{e.inspect}"
-      exit 2
+      Tty.die "#{e.inspect}"
     end
   end
 end

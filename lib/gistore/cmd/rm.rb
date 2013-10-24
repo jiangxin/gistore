@@ -2,13 +2,13 @@ module Gistore
   class Runner
     desc "rm <path> ...", "Remove entry from backup list"
     def rm(*args)
-      gistore = Repo.new(options[:repo] || ".")
+      parse_common_options_and_repo
       args.each do |entry|
         gistore.remove_entry entry
       end
       gistore.save_gistore_backups
     rescue Exception => e
-      $stderr.puts "Error: #{e.message}"
+      Tty.die "#{e.message}"
     end
   end
 end

@@ -195,54 +195,6 @@ module Gistore
       message
     end
 
-    def show_column(args)
-      if Hash === args.last
-        options = args.last.dup
-      else
-        options = {}
-      end
-      options[:padding] ||= 4
-      options[:indent] ||= "    "
-      output = ''
-
-      `#{git_cmd} column </dev/null 2>/dev/null`
-      unless $?.exitstatus == 0
-        width = args.map{|e| e.size}.max.to_i + options[:padding]
-        width = 1 if width < 1
-        column = (80 - options[:indent].size + options[:padding]) / width
-        column = 1 if column < 1
-        col=0
-        args.each do |entry|
-          col += 1
-          output << options[:indent]
-          if col % column == 0
-            output << "#{entry}\n"
-          else
-            output << "%-#{width}s" % entry
-          end
-        end
-        output.rstrip!
-        output << "\n" unless output.empty?
-      else
-        cmds = [git_cmd, "column", "--mode=always",
-                "--indent=#{options[:indent]}",
-                "--padding=#{options[:padding]}"]
-        begin
-          Gistore::shellpipe(*cmds) do |stdin, stdout, stderr|
-            args.each do |entry|
-              stdin.puts entry
-            end
-            stdin.close
-            output = stdout.read
-          end
-        rescue Exception => e
-          output = args.join("\n")
-          output << "\n" unless output.empty?
-        end
-      end
-      output
-    end
-
     def get_gistore_tasks(options={})
       cmds = [git_cmd, "config"]
       unless ENV["GISTORE_TEST_GIT_CONFIG"]
@@ -283,6 +235,120 @@ module Gistore
 
   def git_version_compare(version)
     self.class.git_version_compare(version)
+  end
+
+  class Tty
+    class << self
+      def options
+        @options ||= {}
+      end
+      def blue; bold 34; end
+      def white; bold 39; end
+      def red; underline 31; end
+      def yellow; underline 33 ; end
+      def reset; escape 0; end
+      def em; underline 39; end
+      def green; color 92 end
+      def gray; bold 30 end
+
+      def width
+        @width = begin
+          w = `/bin/stty size`.chomp.split(" ").last.to_i
+          w < 1 ? 80 : w
+        end
+      end
+
+      def truncate(str)
+        str.to_s[0, width - 4]
+      end
+
+      def die(message)
+        error message
+        exit 1
+      end
+
+      def error(message)
+        lines = message.to_s.split("\n")
+        STDERR.puts "#{Tty.red}Error#{Tty.reset}: #{lines.shift}"
+        STDERR.puts lines unless lines.empty?
+      end
+
+      def warning(message)
+        STDERR.puts "#{Tty.red}Warning#{Tty.reset}: #{message}"
+      end
+
+      def info(message)
+        unless quiet?
+          STDERR.puts "#{Tty.blue}Info#{Tty.reset}: #{message}"
+        end
+      end
+
+      def debug(message)
+        if verbose?
+          STDERR.puts "#{Tty.yellow}Debug#{Tty.reset}: #{message}"
+        end
+      end
+
+      private
+
+      def verbose?
+        options[:verbose]
+      end
+
+      def quiet?
+        options[:quiet]
+      end
+
+      def color n
+        escape "0;#{n}"
+      end
+      def bold n
+        escape "1;#{n}"
+      end
+      def underline n
+        escape "4;#{n}"
+      end
+      def escape n
+        "\033[#{n}m" if $stdout.tty?
+      end
+
+      public
+
+      def show_columns(args)
+        if Hash === args.last
+          options = args.last.dup
+        else
+          options = {}
+        end
+        options[:padding] ||= 4
+        options[:indent] ||= 4
+        output = ''
+
+        if $stdout.tty?
+          # determine the best width to display for different console sizes
+          console_width = width
+          longest = args.sort_by { |arg| arg.length }.last.length rescue 0
+          optimal_col_width = ((console_width - options[:indent] + options[:padding]).to_f /
+                               (longest + options[:padding]).to_f).floor rescue 0
+          cols = optimal_col_width > 1 ? optimal_col_width : 1
+
+          Gistore::shellpipe("/usr/bin/pr",
+                             "-#{cols}",
+                             "-o#{options[:indent]}",
+                             "-t",
+                             "-w#{console_width}") do |stdin, stdout, stderr|
+            stdin.puts args
+            stdin.close
+            output << stdout.read
+          end
+          output.rstrip!
+          output << "\n" unless output.empty?
+        else
+          output << args.map{|e| " " * options[:indent] + e.to_s}  * "\n"
+        end
+        output
+      end
+    end
   end
 end
 

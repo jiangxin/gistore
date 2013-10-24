@@ -3,13 +3,13 @@ module Gistore
     desc "export-to-backups", "Export to a series of full/increment backups"
     option :to, :required => true, :banner => "<dir>", :desc => "path to save full/increment backups"
     def export_to_backups
-      self.gistore = Repo.new(options[:repo] || ".")
+      parse_common_options_and_repo
       work_tree = options[:to]
       if File.exist? work_tree
         if not File.directory? work_tree
           raise "\"#{work_tree}\" is not a valid directory."
         elsif Dir.entries(work_tree).size != 2
-          puts "Warning: \"#{work_tree}\" is not a blank directory."
+          Tty.warning "\"#{work_tree}\" is not a blank directory."
         end
       else
         require 'fileutils'
@@ -24,8 +24,7 @@ module Gistore
 
       export_commits(commits, work_tree)
     rescue Exception => e
-      $stderr.puts "Error: #{e.message}"
-      raise
+      Tty.die "#{e.message}"
     end
 
   private
@@ -58,7 +57,7 @@ module Gistore
       prefix << "-g#{right[0...7]}"
 
       if not Dir.glob("#{work_tree}/#{prefix}*.pack").empty?
-        puts "Info: already export commit #{right}"
+        Tty.info "already export commit #{right}"
         return
       end
 
@@ -74,7 +73,7 @@ module Gistore
         stdin.write input_rev
         stdin.close_write
       end
-      puts ">> export #{n}: #{prefix}"
+      Tty.info "export #{n}: #{prefix}"
     end
   end
 end

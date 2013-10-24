@@ -12,6 +12,7 @@ module Gistore
     option :without_work_tree, :type => :boolean, :desc => "not change work tree"
     option :without_locale, :type => :boolean, :desc => "use locale C"
     def repo (name, cmd=nil, *args, &block)
+      parse_common_options
       if options[:repo]
         args ||= []
         args.unshift cmd if cmd
@@ -33,7 +34,7 @@ module Gistore
         raise "Command \"#{cmd}\" is not allowed.\n"
       end
     rescue Exception => e
-      $stderr.puts "Error: #{e.message}"
+      Tty.die "#{e.message}"
     end
 
     desc "log args...", "Show gistore backup logs (delegater for git log)"
