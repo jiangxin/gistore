@@ -86,10 +86,11 @@ module Gistore
       rescue CommandReturnError
         if output and
            (output =~ /no changes added to commit/ or
-            output =~ /nothing to commit/)
+            output =~ /nothing to commit/ or
+            output =~ /nothing added to commit/)
           committed = false
         else
-          raise
+          raise "Failed to execute git-commit:\n\n#{output.to_s}"
         end
       end
 
