@@ -7,5 +7,7 @@ module Gistore
                             "user_name" => nil,
                             "user_email" => nil
                            }
+  GISTORE_REPOSITORY_URL = "git://github.com/jiangxin/gistore"
+  GISTORE_REPOSITORY = File.dirname(File.dirname(File.dirname(__FILE__)))
 
 end
