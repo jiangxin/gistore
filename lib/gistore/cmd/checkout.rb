@@ -27,7 +27,7 @@ module Gistore
       end
       if git_version_compare('1.7.7.1') >= 0
         args = args.empty? ? ["."]: args.dup
-        args << {:work_tree => work_tree, :without_gitdir => true}
+        args << {:work_tree => work_tree}
         args.shift if args.first == '--'
         cmds = [git_cmd,
                 "checkout",
@@ -38,7 +38,7 @@ module Gistore
       else
         gistore.setup_environment
         Dir.chdir(work_tree) do
-          `#{git_cmd} archive --format=tar #{options[:rev] || 'HEAD'} #{args.map{|e| e.inspect}.join(' ')} | tar xf -`
+          `#{git_cmd} archive --format=tar #{options[:rev] || 'HEAD'} #{args.map{|e| e.to_s.gsub " ", "\\ "} * " "} | tar xf -`
         end
       end 
 

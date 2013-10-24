@@ -30,6 +30,7 @@ test_expect_success 'initialize for checkout' '
 	gistore add  --repo repo2.git root/doc &&
 	gistore commit --repo repo.git -m "initialize for checkout" &&
 	gistore commit --repo repo2.git -m "initialize for checkout" &&
+	test ! -d outdir &&
 	gistore checkout  --repo repo.git --to outdir &&
 	find outdir -type f | sed -e "s#${cwd}##g" | sort > actual &&
 	test_cmp expect actual
