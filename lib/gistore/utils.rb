@@ -52,25 +52,55 @@ module Gistore
       Pathname.new(File.join(dir, cmd)) unless dir.nil?
     end
 
-    def shellout(*cmd, &block)
-      if Hash === cmd.last
-        options = cmd.pop.dup
+    def shellout(*args, &block)
+      if Hash === args.last
+        options = args.pop.dup
       else
         options = {}
       end
       options[:stdout_only] = true
-      cmd << options
-      self.popen3(*cmd, &block)
+      args << options
+      self.popen3(*args, &block)
     end
 
-    def shellpipe(*cmd, &block)
-      if Hash === cmd.last
-        options = cmd.pop.dup
+    def shellpipe(*args, &block)
+      if Hash === args.last
+        options = args.pop.dup
       else
         options = {}
       end
-      cmd << options unless options.empty?
-      self.popen3(*cmd, &block)
+      args << options unless options.empty?
+      self.popen3(*args, &block)
+    end
+
+    def system(*args, &block)
+      fork do
+        block.call if block_given?
+        args.map!{|arg| arg.to_s}
+        exec(*args) rescue nil
+        # never gets here unless raise some error (exec failed)
+        exit! 1
+      end
+      Process.wait
+      $?.success?
+    end
+
+    # Same like system but with exceptions
+    def safe_system(*args, &block)
+      unless Gistore.system(*args, &block)
+        args = args.map{ |arg| arg.to_s.gsub " ", "\\ " } * " "
+        raise CommandReturnError, "Failure while executing: #{args}"
+      end
+    end
+
+    # prints no output
+    def quiet_system(*args)
+      Gistore.system(*args) do
+        # Redirect output streams to `/dev/null` instead of closing as some programs
+        # will fail to execute if they can't write to an open stream.
+        $stdout.reopen('/dev/null')
+        $stderr.reopen('/dev/null')
+      end
     end
 
     if RUBY_VERSION < '1.9'

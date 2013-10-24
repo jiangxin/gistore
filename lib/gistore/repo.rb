@@ -316,40 +316,40 @@ module Gistore
     end
 
     # block has only 1 arg: stdout
-    def shellout(*cmd, &block)
-      if Hash === cmd.last
-        options = cmd.last.dup
+    def shellout(*args, &block)
+      if Hash === args.last
+        options = args.last.dup
       else
         options = {}
       end
       setup_environment(options)
       if options[:without_work_tree]
-        Gistore::shellout(*cmd, &block)
+        Gistore::shellout(*args, &block)
       else
         Dir.chdir(options[:work_tree] || @work_tree) do
-          Gistore::shellout(*cmd, &block)
+          Gistore::shellout(*args, &block)
         end
       end
     end
 
     # block has 3 args: stdin, stdout, stderr
-    def shellpipe(*cmd, &block)
-      if Hash === cmd.last
-        options = cmd.last.dup
+    def shellpipe(*args, &block)
+      if Hash === args.last
+        options = args.last.dup
       else
         options = {}
       end
       setup_environment(options)
       if options[:without_work_tree]
-        Gistore::shellpipe(*cmd, &block)
+        Gistore::shellpipe(*args, &block)
       else
         Dir.chdir(options[:work_tree] || @work_tree) do
-          Gistore::shellpipe(*cmd, &block)
+          Gistore::shellpipe(*args, &block)
         end
       end
     end
 
-    def system(*args)
+    def system(*args, &block)
       if Hash === args.last
         options = args.pop.dup
       else
@@ -357,12 +357,43 @@ module Gistore
       end
       setup_environment(options)
       if options[:without_work_tree]
-        # Kernel system can not convert bool, int to string
-        Kernel::system(*args.map{|e| e.to_s})
+        Gistore::system(*args, &block)
       else
         Dir.chdir(options[:work_tree] || @work_tree) do
-          # Kernel system can not convert bool, int to string
-          Kernel::system(*args.map{|e| e.to_s})
+          Gistore::system(*args, &block)
+        end
+      end
+    end
+
+    # Same like system but with exceptions
+    def safe_system(*args, &block)
+      if Hash === args.last
+        options = args.pop.dup
+      else
+        options = {}
+      end
+      setup_environment(options)
+      if options[:without_work_tree]
+        Gistore::safe_system(*args, &block)
+      else
+        Dir.chdir(options[:work_tree] || @work_tree) do
+          Gistore::safe_system(*args, &block)
+        end
+      end
+    end
+
+    def quiet_system(*args, &block)
+      if Hash === args.last
+        options = args.pop.dup
+      else
+        options = {}
+      end
+      setup_environment(options)
+      if options[:without_work_tree]
+        Gistore::quiet_system(*args, &block)
+      else
+        Dir.chdir(options[:work_tree] || @work_tree) do
+          Gistore::quiet_system(*args, &block)
         end
       end
     end
@@ -575,15 +606,15 @@ Full backup of #{task_name || File.basename(repo_path)}
       end
       if gc_enabled
         if options[:force]
-          system git_cmd, "reflog", "expire", "--expire=now", "--all", :without_work_tree => true
-          system git_cmd, "prune", "--expire=now", :without_work_tree => true
+          safe_system git_cmd, "reflog", "expire", "--expire=now", "--all", :without_work_tree => true
+          safe_system git_cmd, "prune", "--expire=now", :without_work_tree => true
           args.delete "--auto" if args.include? "--auto"
           args << {:without_work_tree => true}
-          system git_cmd, "gc", *args
+          safe_system git_cmd, "gc", *args
         else
           args.unshift "--auto" unless args.include? "--auto"
           args << {:without_work_tree => true}
-          system git_cmd, "gc", *args
+          safe_system git_cmd, "gc", *args
         end
       else
         $stderr.puts "GC is disabled."

@@ -31,7 +31,7 @@ module Gistore
 
       if all or options[:git]
         puts "#{'-' * 30} Git status #{'-' * 30}" if all
-        gistore.system(git_cmd, "status", *args)
+        gistore.safe_system(git_cmd, "status", *args)
       end
     rescue Exception => e
       $stderr.puts "Error: #{e.message}"

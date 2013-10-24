@@ -23,7 +23,7 @@ module Gistore
         opts.delete("repo")
         args << opts
         gistore = Repo.new(name || ".")
-        gistore.system(git_cmd, cmd, *args)
+        gistore.safe_system(git_cmd, cmd, *args)
       elsif self.respond_to? cmd
         # Because command may have specific options mixed in args,
         # can not move options from args easily. So we not call

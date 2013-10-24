@@ -34,7 +34,7 @@ module Gistore
                 options[:rev] || 'HEAD',
                 "--",
                 *args]
-        gistore.system(*cmds)
+        gistore.safe_system(*cmds)
       else
         gistore.setup_environment
         Dir.chdir(work_tree) do
