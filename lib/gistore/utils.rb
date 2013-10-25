@@ -253,7 +253,8 @@ module Gistore
 
       def width
         @width = begin
-          w = `/bin/stty size`.chomp.split(" ").last.to_i
+          w = %x{stty size 2>/dev/null}.chomp.split.last.to_i.nonzero?
+          w ||= %x{tput cols 2>/dev/null}.to_i
           w < 1 ? 80 : w
         end
       end
