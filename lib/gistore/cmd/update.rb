@@ -61,7 +61,7 @@ module Gistore
       args << "-q" unless @options[:verbose]
       args << "origin"
       # the refspec ensures that 'origin/master' gets updated
-      args << "refs/heads/master:refs/remotes/origin/master"
+      args << "+refs/heads/master:refs/remotes/origin/master"
 
       reset_on_interrupt { Gistore.safe_system *args }
 
