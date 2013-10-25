@@ -8,6 +8,12 @@ test_description='Test git version compare'
 TEST_NO_CREATE_REPO=NoThanks
 . ./test-lib.sh
 
+test_expect_success 'gistore version' '
+	gistore --version | grep "Gistore version [0-9.]\+ (.\+)" &&
+	gistore -v | grep "Gistore version [0-9.]\+ (.\+)" &&
+	gistore version | grep "Gistore version [0-9.]\+ (.\+)"
+'
+
 test_expect_success 'compare two versions' '
 	test $(gistore check-git-version 1.8.5 1.8.5) -eq 0 &&
 	test $(gistore check-git-version 1.8.4 1.8.4.1) -eq -1 &&
