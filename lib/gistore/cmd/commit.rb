@@ -117,6 +117,7 @@ module Gistore
     desc "commit-all [-m <message>]", "Start backup (commit) all tasks", :hide => true
     option :message, :aliases => :m, :desc => "commit log"
     def commit_all
+      messages = []
       Gistore::get_gistore_tasks.each do |task, path|
         cmds = ["commit", "--repo", path]
         if options[:message]
@@ -124,7 +125,15 @@ module Gistore
           cmds << options[:message]
         end
         # invoke run only once? -- invoke :commit, args, opts
-        Gistore::Runner.start(cmds)
+        begin
+          Gistore::Runner.start(cmds)
+        rescue Exception => e
+          messages << "Failed to execute #{cmds}."
+          messages << "Error_msg: #{e.message}"
+        end
+      end
+      unless messages.empty?
+        Tty.die "At lease one task backup failed.\n#{messages * "\n"}"
       end
     end
 

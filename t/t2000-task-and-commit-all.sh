@@ -5,7 +5,7 @@
 
 test_description='Test gistore task'
 
-TEST_NO_CREATE_REPO=NoPlease
+TEST_NO_CREATE_REPO=NoThanks
 . ./lib-worktree.sh
 . ./test-lib.sh
 
@@ -103,6 +103,34 @@ test_expect_success 'task remove' '
 	gistore commit-all &&
 	test "$(count_git_commits repo1.git)" = "4" &&
 	test "$(count_git_commits repo2.git)" = "3"
+'
+
+cat >expect << EOF
+    hello => repo1.git
+    world => repo2.git
+System level Tasks
+User level Tasks
+EOF
+
+test_expect_success 'commit-all while missing task repo' '
+	gistore task add hello repo1.git &&
+	gistore task add world repo2.git &&
+	gistore task list | grep -q "$cwd" &&
+	gistore task list | sed -e "/^$/d" | \
+		sed -e "s#${cwd}/##g" | sort -u > actual &&
+	test_cmp expect actual &&
+	do_hack &&
+	gistore commit-all &&
+	test "$(count_git_commits repo1.git)" = "5" &&
+	test "$(count_git_commits repo2.git)" = "4" &&
+	mv repo1.git repo1.git.moved &&
+	do_hack &&
+	test_must_fail gistore commit-all &&
+	test "$(count_git_commits repo2.git)" = "5" &&
+	mv repo1.git.moved repo1.git &&
+	mv repo2.git repo2.git.moved &&
+	test_must_fail gistore commit-all
+	test "$(count_git_commits repo1.git)" = "6"
 '
 
 test_done
