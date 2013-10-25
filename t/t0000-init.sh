@@ -17,6 +17,25 @@ test_expect_success 'init with default normal plan' '
 	)
 '
 
+cat >expect <<EOF
+Repository format 1
+EOF
+
+test_expect_success 'check repo format version' '
+	gistore --version --repo default | tail -1 > actual &&
+	test_cmp expect actual
+'
+
+cat >expect <<EOF
+Error: Non-empty directory 'default' is already exist.
+EOF
+
+test_expect_success 'can not init on a no-empty directory' '
+	test_must_fail gistore init --repo default &&
+	(gistore init --repo default 2>actual || true ) &&
+	test_cmp expect actual
+'
+
 test_expect_success 'check default gistore/git configurations' '
 	(
 		cd default &&

@@ -6,7 +6,7 @@ module Gistore
   class Runner
     desc "init", "Initialize gistore repository"
     long_desc <<-LONGDESC
-      `gistore init <repo>` will create a gistore backup repo.
+      `gistore init [--repo] <repo>` will create a gistore backup repo.
 
       The created <repo> is a bare git repository, and when excute backup and/or
       other commands on <repo>, GIT_WORK_TREE will be set as '/', and GIT_DIR

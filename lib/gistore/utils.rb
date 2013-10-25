@@ -269,23 +269,39 @@ module Gistore
 
       def error(message)
         lines = message.to_s.split("\n")
-        STDERR.puts "#{Tty.red}Error#{Tty.reset}: #{lines.shift}"
+        if STDERR.tty?
+          STDERR.puts "#{Tty.red}Error#{Tty.reset}: #{lines.shift}"
+        else
+          STDERR.puts "Error: #{lines.shift}"
+        end
         STDERR.puts lines unless lines.empty?
       end
 
       def warning(message)
-        STDERR.puts "#{Tty.red}Warning#{Tty.reset}: #{message}"
+        if STDERR.tty?
+          STDERR.puts "#{Tty.red}Warning#{Tty.reset}: #{message}"
+        else
+          STDERR.puts "Warning: #{message}"
+        end
       end
 
       def info(message)
         unless quiet?
-          STDERR.puts "#{Tty.blue}Info#{Tty.reset}: #{message}"
+          if STDERR.tty?
+            STDERR.puts "#{Tty.blue}Info#{Tty.reset}: #{message}"
+          else
+            STDERR.puts "Info: #{message}"
+          end
         end
       end
 
       def debug(message)
         if verbose?
-          STDERR.puts "#{Tty.yellow}Debug#{Tty.reset}: #{message}"
+          if STDERR.tty?
+            STDERR.puts "#{Tty.yellow}Debug#{Tty.reset}: #{message}"
+          else
+            STDERR.puts "Debug: #{message}"
+          end
         end
       end
 
