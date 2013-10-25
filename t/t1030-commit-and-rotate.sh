@@ -5,7 +5,7 @@
 
 test_description='Test gistore commit'
 
-TEST_NO_CREATE_REPO=NoPlease
+TEST_NO_CREATE_REPO=NoThanks
 . ./lib-worktree.sh
 . ./test-lib.sh
 

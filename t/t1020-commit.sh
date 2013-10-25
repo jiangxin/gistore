@@ -5,7 +5,7 @@
 
 test_description='Test gistore commit'
 
-TEST_NO_CREATE_REPO=NoPlease
+TEST_NO_CREATE_REPO=NoThanks
 . ./lib-worktree.sh
 . ./test-lib.sh
 
@@ -20,12 +20,6 @@ root/src/lib/a/foo.c
 root/src/lib/b/bar.o
 root/src/lib/b/baz.a
 EOF
-
-# test_expect_success 'remove to avoid .gitignore side-effect' '
-# 	if [ -f "$TEST_DIRECTORY/.gitignore" ]; then
-# 		mv  "$TEST_DIRECTORY/.gitignore" "$TEST_DIRECTORY/.gitignore.save"
-# 	fi
-# '
 
 test_expect_success 'initialize for commit' '
 	prepare_work_tree &&
@@ -127,11 +121,14 @@ test_expect_success 'add real files instead of submodule' '
 	test_cmp expect actual
 '
 
-# test_expect_success 'restore .gitignore' '
-# 	if [ -f "$TEST_DIRECTORY/.gitignore.save" ]; then
-# 		mv  "$TEST_DIRECTORY/.gitignore.save" "$TEST_DIRECTORY/.gitignore"
-# 	fi
-# '
+cat >expect <<EOF
+Error: Can not find repo at "non-exist-repo.git"
+EOF
 
+test_expect_success 'fail if commit on non-exist repo' '
+	test_must_fail gistore commit --repo non-exist-repo.git &&
+	(gistore commit --repo non-exist-repo.git 2>actual || true) &&
+	test_cmp expect actual
+'
 
 test_done

@@ -42,10 +42,8 @@ module Gistore
         end
       end 
 
-    rescue SystemExit
-      exit 1
     rescue Exception => e
-      Tty.die "#{e.inspect}"
+      Tty.die "#{e.message}"
     end
   end
 end

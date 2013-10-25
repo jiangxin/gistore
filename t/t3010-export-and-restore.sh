@@ -5,7 +5,7 @@
 
 test_description='Test gistore export and restore'
 
-TEST_NO_CREATE_REPO=NoPlease
+TEST_NO_CREATE_REPO=NoThanks
 . ./lib-worktree.sh
 . ./test-lib.sh
 
@@ -17,6 +17,26 @@ do_hack()
 
 cwd=$(pwd -P)
 n=0
+
+cat >expect <<EOF
+Error: Can not find repo at "non-exist-repo.git"
+EOF
+
+test_expect_success 'fail to export non-exist repo' '
+	test_must_fail gistore export-to-backups --repo non-exist-repo.git --to non-exist-dir &&
+	(gistore export-to-backups --repo non-exist-repo.git --to non-exist-dir 2>actual || true) &&
+	test_cmp expect actual
+'
+
+cat >expect <<EOF
+Error: Failed to restore-from-backups.
+Error: Path "non-exist-dir" does not exist.
+EOF
+test_expect_success 'fail to restore from non-exist-dir' '
+	test_must_fail gistore restore-from-backups --from non-exist-dir --to no-exist-repo.git &&
+	(gistore restore-from-backups --from non-exist-dir --to no-exist-repo.git 2>actual || true) &&
+	test_cmp expect actual
+'
 
 cat >expect << EOF
 Backup No. 24

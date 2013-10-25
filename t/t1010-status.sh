@@ -5,7 +5,7 @@
 
 test_description='Test gistore status'
 
-TEST_NO_CREATE_REPO=NoPlease
+TEST_NO_CREATE_REPO=NoThanks
 . ./lib-worktree.sh
 . ./test-lib.sh
 
@@ -16,6 +16,8 @@ root/doc
 root/src
 EOF
 
+# Parent .gitignore ignore all this directory, and new file
+# will not show in git-status.
 test_expect_success 'remove to avoid .gitignore side-effect' '
 	if [ -f "$TEST_DIRECTORY/.gitignore" ]; then
 		mv  "$TEST_DIRECTORY/.gitignore" "$TEST_DIRECTORY/.gitignore.save"
@@ -32,7 +34,8 @@ test_expect_success 'status show backup list' '
 	test_cmp expect actual
 '
 
-# Start from git v1.7.4 filenames in git-status are quoted.
+# Before git v1.7.4,  filenames in git-status are NOT quoted.
+# So strip double quote before compare with this.
 cat >expect << EOF
  M root/doc/COPYRIGHT
  M root/src/README.txt
@@ -53,10 +56,32 @@ test_expect_success GIT_CAP_WILDMATCH 'status --git (1)' '
 	test_cmp expect actual
 '
 
+# Rstore parent .gitignore file
 test_expect_success 'restore .gitignore' '
 	if [ -f "$TEST_DIRECTORY/.gitignore.save" ]; then
 		mv  "$TEST_DIRECTORY/.gitignore.save" "$TEST_DIRECTORY/.gitignore"
 	fi
+'
+
+cat >expect <<EOF
+Error: Can not find repo at "non-exist-repo.git"
+EOF
+
+test_expect_success 'fail for non-exist gitstore repo' '
+	test_must_fail gistore status --repo non-exist-repo.git &&
+	(gistore add --repo non-exist-repo.git 2>actual || true) &&
+	test_cmp expect actual
+'
+
+cat >expect <<EOF
+Error: Failure while executing: git status --bad-git-status-option
+EOF
+
+test_expect_success 'fail for bad git status options' '
+	test_must_fail gistore status --repo repo.git --bad-git-status-option &&
+	(gistore status --repo repo.git --bad-git-status-option 2>&1 | grep "^Error" |
+	 sed -e "s/ [^ ]*\/git/ git/" > actual || true) &&
+	test_cmp expect actual
 '
 
 test_done

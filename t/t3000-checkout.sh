@@ -5,7 +5,7 @@
 
 test_description='Test gistore checkout'
 
-TEST_NO_CREATE_REPO=NoPlease
+TEST_NO_CREATE_REPO=NoThanks
 . ./lib-worktree.sh
 . ./test-lib.sh
 
@@ -33,6 +33,28 @@ test_expect_success 'initialize for checkout' '
 	test ! -d outdir &&
 	gistore checkout  --repo repo.git --to outdir &&
 	find outdir -type f | sed -e "s#${cwd}##g" | sort > actual &&
+	test_cmp expect actual
+'
+
+cat >expect <<EOF
+Error: Can not find repo at "non-exist-repo.git"
+EOF
+
+test_expect_success 'fail to checkout non-exist repo' '
+	test_must_fail gistore checkout --repo non-exist-repo.git --to non-exist-dir &&
+	(gistore checkout --repo non-exist-repo.git --to non-exist-dir 2>actual || true) &&
+	test_cmp expect actual
+'
+
+cat >expect <<EOF
+fatal: invalid reference: bad-revision
+Error: Failure while executing: git checkout bad-revision -- .
+EOF
+
+test_expect_success 'fail to checkout bad revision' '
+	test_must_fail gistore checkout --repo repo.git --to bad-rev-checkout --rev bad-revision &&
+	(export LC_ALL=C; LANG=C gistore checkout --repo repo.git --to bad-rev-checkout --rev bad-revision 2>&1 |
+	 sed -e "s/ [^ ]*\/git/ git/" > actual || true) &&
 	test_cmp expect actual
 '
 
