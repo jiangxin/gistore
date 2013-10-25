@@ -3,6 +3,7 @@ module Gistore
     desc "rm <path> ...", "Remove entry from backup list"
     def rm(*args)
       parse_common_options_and_repo
+      raise "nothing to remove." if args.empty?
       args.each do |entry|
         gistore.remove_entry entry
       end

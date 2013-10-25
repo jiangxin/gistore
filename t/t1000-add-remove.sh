@@ -5,7 +5,7 @@
 
 test_description='Test gistore add and rm'
 
-TEST_NO_CREATE_REPO=
+TEST_NO_CREATE_REPO=NoThanks
 . ./lib-worktree.sh
 . ./test-lib.sh
 
@@ -46,6 +46,7 @@ $cwd/root
 EOF
 
 test_expect_success 'root override root/src and root/doc' '
+	gistore add --repo repo.git root/src &&
 	gistore add --repo repo.git root &&
 	gistore add --repo repo.git root/doc &&
 	gistore status --repo repo.git --backup > actual &&
@@ -65,6 +66,24 @@ test_expect_success 'not add subdir of repo' '
 	gistore add --repo repo.git repo.git/refs &&
 	gistore status --repo repo.git --backup > actual &&
 	test_cmp expect actual
+'
+
+cat >expect <<EOF
+Error: Can not find repo at "non-exist-repo.git"
+EOF
+
+test_expect_success 'fail to add/remove on non-exist repo' '
+	test_must_fail gistore add --repo non-exist-repo.git root/src &&
+	(gistore add --repo non-exist-repo.git 2>actual || true) &&
+	test_cmp expect actual &&
+	test_must_fail gistore rm --repo non-exist-repo.git root/src &&
+	(gistore add --repo non-exist-repo.git 2>actual || true) &&
+	test_cmp expect actual
+'
+
+test_expect_success 'fail if no argument for add/remove' '
+	test_must_fail gistore add --repo repo.git &&
+	test_must_fail gistore rm --repo repo.git
 '
 
 test_done
