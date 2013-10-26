@@ -125,7 +125,7 @@ test_expect_success 'commit-all while missing task repo' '
 	test "$(count_git_commits repo2.git)" = "5" &&
 	mv repo1.git.moved repo1.git &&
 	mv repo2.git repo2.git.moved &&
-	test_must_fail gistore commit-all
+	test_must_fail gistore commit-all &&
 	test "$(count_git_commits repo1.git)" = "6"
 '
 

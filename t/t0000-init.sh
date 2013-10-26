@@ -40,7 +40,7 @@ test_expect_success 'check default gistore/git configurations' '
 	(
 		cd default &&
 		test "$(gistore config full_backup_number)" = "12" &&
-		test "$(gistore config increment_backup_number)" = "30"
+		test "$(gistore config increment_backup_number)" = "30" &&
 		test -z "$(gistore config gc.auto)" &&
 		test -z "$(gistore config core.compression)" &&
 		test -z "$(gistore config core.loosecompression)" &&

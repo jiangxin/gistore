@@ -58,7 +58,7 @@ EOF
 test_expect_success 'commit if something removed' '
 	rm root/src/lib/b/baz.a &&
 	gistore commit --repo repo.git &&
-	test "$(count_git_commits repo.git)" = "3"
+	test "$(count_git_commits repo.git)" = "3" &&
 	gistore repo repo.git ls-tree --name-only \
 		-r HEAD | sed -e "s#^${cwd#/}/##g" > actual &&
 	test_cmp expect actual
@@ -78,7 +78,7 @@ test_expect_success 'commit even for symlink' '
 	mv root/src root/new_src &&
 	ln -s new_src root/src &&
 	gistore commit --repo repo.git &&
-	test "$(count_git_commits repo.git)" = "4"
+	test "$(count_git_commits repo.git)" = "4" &&
 	gistore repo repo.git ls-tree --name-only \
 		-r HEAD | sed -e "s#^${cwd#/}/##g" > actual &&
 	test_cmp expect actual
