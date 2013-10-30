@@ -1,0 +1,15 @@
+Source: gistore
+Section: utils
+Priority: optional
+Maintainer: Jiang Xin <worldhello.net@gmail.com>
+Build-Depends: debhelper (>= 5.0), cdbs (>= 0.4.43)
+Homepage: http://www.ossxp.com/
+
+Package: gistore
+Architecture: all
+Section: utils
+Priority: optional
+Depends: git-core (>= 1:1.6.0) | git (>= 1:1.6), ruby
+Description: Backup system based on Git
+ A backup utility using git as a backend, and can be used to backup arbitrary
+ files and directories.

@@ -1,0 +1,3 @@
+bin          /usr/lib/gistore
+config       /usr/lib/gistore
+lib          /usr/lib/gistore
