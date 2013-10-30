@@ -9,7 +9,7 @@ TEST_NO_CREATE_REPO=NoThanks
 . ./test-lib.sh
 
 test_expect_success 'gistore version' '
-	gistore --version | grep "Gistore version [^ ]\+ (.\+)" &&
+	gistore --version | grep -q "Gistore version [0-9]\+" &&
 	test "$(gistore -v)" = "$(gistore --version)" &&
 	test "$(gistore version)" = "$(gistore --version)"
 '
