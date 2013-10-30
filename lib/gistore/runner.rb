@@ -5,9 +5,7 @@ module Gistore
   class Runner < Thor
     attr_accessor :gistore
     # Use command name "gistore" in help instead of "gistore.rb"
-    def self.basename
-      "gistore"
-    end
+    def self.basename; "gistore"; end
 
     # Show in help screen
     package_name "Gistore"

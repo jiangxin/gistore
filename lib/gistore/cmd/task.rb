@@ -1,12 +1,18 @@
 module Gistore
-  class SubCommandTask < Thor; end
+  class Task < Thor; end
 
   class Runner
     desc "task SUBCOMMAND ...ARGS", "manage set of tracked repositories"
-    subcommand "task", Gistore::SubCommandTask
+    subcommand "task", Gistore::Task
   end
 
-  class SubCommandTask < Thor
+  class Task < Thor
+    # Use command name "gistore" in help instead of "gistore.rb"
+    def self.basename; "gistore"; end
+
+    # Show in help screen
+    package_name "Gistore"
+
     desc "add <task> [<repo>]", "Register repo as a task"
     option :system, :type => :boolean
     def add(task, path=nil)
