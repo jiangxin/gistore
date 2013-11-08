@@ -59,6 +59,7 @@ to test gistore in local repository.
 	exit 1
 fi
 
+PERL_PATH="/usr/bin/perl"
 SHELL_PATH="/bin/sh"
 DIFF='diff'
 export PERL_PATH SHELL_PATH
