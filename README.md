@@ -88,7 +88,11 @@ and this file is updated automatically.
 Installation
 ============
 
-Just clone this repo [1] from github, and link 'bin/gistore' to your PATH.
+Install using RubyGems:
+
+    $ gem install gistore
+
+Or clone this repo [1] from github, and link 'bin/gistore' to your PATH.
 
     $ git clone git://github.com/jiangxin/gistore
     $ ln -s $(pwd)/bin/gistore ~/bin/

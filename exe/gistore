@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+
+std_trap = trap("INT") { exit! 130 } # no backtrace thanks
+
+require 'gistore/runner'
+require 'gistore/utils'
+
+abort "Please install git first" unless git_cmd
+if Gistore.git_version_compare('1.6.0') < 0
+  abort "Git lower than 1.6.0 has not been tested. Please upgrade your git."
+end
+
+$gistore_runner = true
+Gistore::Runner.start
