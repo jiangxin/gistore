@@ -1,5 +1,6 @@
 #!/bin/sh
 #
+# Copyright (c) 2013 Jiang Xin (borrow from Git)
 # Copyright (c) 2005 Junio C Hamano
 #
 # This program is free software: you can redistribute it and/or modify
@@ -33,19 +34,32 @@ then
 	# elsewhere
 	TEST_OUTPUT_DIRECTORY=$TEST_DIRECTORY
 fi
-GISTORE_BIN_DIR="$TEST_DIRECTORY"/../bin
+if test -n "$TEST_LOCAL_UNINSTALLED"
+then
+	GISTORE_BIN_DIR="$TEST_DIRECTORY"/../bin
+fi
 
 ################################################################
 # It appears that people try to run tests without building...
-"$GISTORE_BIN_DIR/gistore" >/dev/null
+if test -n "$TEST_LOCAL_UNINSTALLED"
+then
+	"$GISTORE_BIN_DIR/gistore" >/dev/null 2>&1 
+else
+	gistore >/dev/null 2>&1
+fi
 if test $? != 0
 then
-	echo >&2 'error: can not find gistore for test.'
+	cat >&2 <<-EOF
+Error: can not find gistore for test.  Run the following command
+to test gistore in local repository.
+
+    $ TEST_LOCAL_UNINSTALLED=t make
+
+	EOF
 	exit 1
 fi
 
 SHELL_PATH="/bin/sh"
-PERL_PATH="/usr/bin/perl"
 DIFF='diff'
 export PERL_PATH SHELL_PATH
 
@@ -66,12 +80,10 @@ done,*)
 esac
 
 # For repeatability, reset the environment to known value.
-#LANG=C
-#LC_ALL=C
 PAGER=cat
 TZ=UTC
 TERM=dumb
-export LANG LC_ALL PAGER TERM TZ
+export PAGER TERM TZ
 EDITOR=:
 # A call to "unset" with no arguments causes at least Solaris 10
 # /usr/xpg4/bin/sh and /bin/ksh to bail out.  So keep the unsets
@@ -513,13 +525,11 @@ test_done () {
 
 # Set up a directory that we can put in PATH which redirects all gistore
 # calls.
-if test -n "$GIT_TEST_INSTALLED"
+if test -n "$TEST_LOCAL_UNINSTALLED"
 then
-	PATH=$GIT_TEST_INSTALLED:$GISTORE_BIN_DIR:$PATH
-else
 	PATH="$GISTORE_BIN_DIR:$PATH"
+	export PATH
 fi
-export PATH
 
 # GIT_TEST_CMP is used in function test_cmp
 if test -z "$GIT_TEST_CMP"

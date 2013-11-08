@@ -625,7 +625,7 @@ Full backup of #{task_name || File.basename(repo_path)}
 
     def load_default_config
       @gistore_config = DEFAULT_GISTORE_CONFIG
-      gistore_default_config_file = File.join(File.dirname(File.dirname(File.dirname(__FILE__))),
+      gistore_default_config_file = File.join(File.dirname(__FILE__),
                                               "config/gistore.yml")
       @gistore_config.merge!(YAML::load_file(gistore_default_config_file) || {})
       @gistore_backups = []
